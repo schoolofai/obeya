@@ -82,7 +82,7 @@ func initSharedBoard(boardName string, columns []string) error {
 	}
 
 	boardDir := store.SharedBoardDir(obeyaHome, boardName)
-	boardFile := filepath.Join(boardDir, "board.json")
+	boardFile := filepath.Join(boardDir, ".obeya", "board.json")
 
 	if _, err := os.Stat(boardFile); err == nil {
 		return fmt.Errorf("board %q already exists — use 'ob link %s' to connect this project", boardName, boardName)

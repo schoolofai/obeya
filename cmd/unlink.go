@@ -61,7 +61,10 @@ func unregisterProject(boardName, projectName string) error {
 	boardDir := store.SharedBoardDir(obeyaHome, boardName)
 	boardJsonPath := filepath.Join(boardDir, ".obeya", "board.json")
 	if _, err := os.Stat(boardJsonPath); err != nil {
-		return nil // shared board doesn't exist, nothing to unregister
+		if os.IsNotExist(err) {
+			return nil // board was already deleted, nothing to unregister
+		}
+		return fmt.Errorf("failed to check shared board at %s: %w", boardJsonPath, err)
 	}
 
 	sharedStore := store.NewJSONStore(boardDir)
