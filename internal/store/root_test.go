@@ -129,8 +129,8 @@ func TestFindGitRoot_NotFound(t *testing.T) {
 func TestFindProjectRoot_ObeyaLinkInCwd(t *testing.T) {
 	homeDir := t.TempDir()
 	boardDir := filepath.Join(homeDir, "boards", "myboard")
-	os.MkdirAll(boardDir, 0755)
-	os.WriteFile(filepath.Join(boardDir, "board.json"), []byte("{}"), 0644)
+	os.MkdirAll(filepath.Join(boardDir, ".obeya"), 0755)
+	os.WriteFile(filepath.Join(boardDir, ".obeya", "board.json"), []byte("{}"), 0644)
 
 	projectDir := t.TempDir()
 	os.MkdirAll(filepath.Join(projectDir, ".git"), 0755)
@@ -148,8 +148,8 @@ func TestFindProjectRoot_ObeyaLinkInCwd(t *testing.T) {
 func TestFindProjectRoot_ObeyaLinkInParent(t *testing.T) {
 	homeDir := t.TempDir()
 	boardDir := filepath.Join(homeDir, "boards", "myboard")
-	os.MkdirAll(boardDir, 0755)
-	os.WriteFile(filepath.Join(boardDir, "board.json"), []byte("{}"), 0644)
+	os.MkdirAll(filepath.Join(boardDir, ".obeya"), 0755)
+	os.WriteFile(filepath.Join(boardDir, ".obeya", "board.json"), []byte("{}"), 0644)
 
 	projectDir := t.TempDir()
 	os.MkdirAll(filepath.Join(projectDir, ".git"), 0755)
@@ -170,8 +170,8 @@ func TestFindProjectRoot_ObeyaLinkInParent(t *testing.T) {
 func TestFindProjectRoot_ObeyaLinkTakesPrecedenceOverLocal(t *testing.T) {
 	homeDir := t.TempDir()
 	boardDir := filepath.Join(homeDir, "boards", "myboard")
-	os.MkdirAll(boardDir, 0755)
-	os.WriteFile(filepath.Join(boardDir, "board.json"), []byte("{}"), 0644)
+	os.MkdirAll(filepath.Join(boardDir, ".obeya"), 0755)
+	os.WriteFile(filepath.Join(boardDir, ".obeya", "board.json"), []byte("{}"), 0644)
 
 	projectDir := t.TempDir()
 	os.WriteFile(filepath.Join(projectDir, ".obeya-link"), []byte("myboard"), 0644)

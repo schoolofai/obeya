@@ -105,7 +105,7 @@ func resolveLink(dir, obeyaHome string) (string, error) {
 	}
 
 	boardDir := SharedBoardDir(obeyaHome, boardName)
-	boardFile := filepath.Join(boardDir, "board.json")
+	boardFile := filepath.Join(boardDir, ".obeya", "board.json")
 	if _, err := os.Stat(boardFile); err != nil {
 		return "", fmt.Errorf("linked board %q not found at %s — run 'ob unlink' to remove the stale link", boardName, boardDir)
 	}

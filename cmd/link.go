@@ -159,10 +159,14 @@ func resolveProjectName(gitRoot string) string {
 	return filepath.Base(gitRoot)
 }
 
+// resolveGitRemote returns the origin remote URL for the given git root.
+// Returns "" when no remote is configured, which is a valid state for local-only repos
+// (git remote get-url origin exits with code 2 in that case).
 func resolveGitRemote(gitRoot string) string {
 	cmd := exec.Command("git", "-C", gitRoot, "remote", "get-url", "origin")
 	out, err := cmd.Output()
 	if err != nil {
+		// No remote configured is a valid state for local repos — not an error.
 		return ""
 	}
 	return strings.TrimSpace(string(out))

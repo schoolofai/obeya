@@ -71,6 +71,10 @@ func (s *JSONStore) LoadBoard() (*domain.Board, error) {
 		board.Plans = make(map[string]*domain.Plan)
 	}
 
+	if board.Projects == nil {
+		board.Projects = make(map[string]*domain.LinkedProject)
+	}
+
 	return &board, nil
 }
 
