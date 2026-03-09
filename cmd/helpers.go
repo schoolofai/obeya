@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/user"
+	"path/filepath"
 
 	"github.com/niladribose/obeya/internal/engine"
 	"github.com/niladribose/obeya/internal/store"
@@ -51,6 +52,22 @@ func getUserID() string {
 		return "unknown"
 	}
 	return u.Username
+}
+
+func getProjectName() string {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return ""
+	}
+	gitRoot, err := store.FindGitRoot(cwd)
+	if err != nil {
+		return ""
+	}
+	linkFile := filepath.Join(gitRoot, ".obeya-link")
+	if _, err := os.Stat(linkFile); err != nil {
+		return "" // not linked, no project tag
+	}
+	return resolveProjectName(gitRoot)
 }
 
 func getSessionID() string {

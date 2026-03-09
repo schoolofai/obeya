@@ -50,6 +50,21 @@ var createCmd = &cobra.Command{
 			return err
 		}
 
+		projectName := getProjectName()
+		if projectName != "" {
+			s := getStore()
+			txErr := s.Transaction(func(b *domain.Board) error {
+				if it, ok := b.Items[item.ID]; ok {
+					it.Project = projectName
+				}
+				return nil
+			})
+			if txErr != nil {
+				return fmt.Errorf("failed to tag item with project: %w", txErr)
+			}
+			item.Project = projectName
+		}
+
 		return printCreatedItem(item)
 	},
 }
