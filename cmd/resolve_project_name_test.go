@@ -62,13 +62,8 @@ func TestResolveProjectName_SSHRemote(t *testing.T) {
 	}
 
 	result := resolveProjectName(dir)
-	// Current implementation splits by "/" which produces "git@github.com:testorg/testrepo"
-	// This test documents the current (broken) behavior for SSH remotes
-	// TODO: fix resolveProjectName to handle SSH URLs
-	t.Logf("SSH remote resolves to: %q", result)
-	// For now, just verify it doesn't panic and returns something
-	if result == "" {
-		t.Error("expected non-empty project name")
+	if result != "testorg/testrepo" {
+		t.Errorf("expected 'testorg/testrepo', got %q", result)
 	}
 }
 

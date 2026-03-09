@@ -151,6 +151,10 @@ func resolveProjectName(gitRoot string) string {
 	remote := resolveGitRemote(gitRoot)
 	if remote != "" {
 		remote = strings.TrimSuffix(remote, ".git")
+		// Normalize SSH URLs: git@github.com:org/repo → git@github.com/org/repo
+		if idx := strings.Index(remote, ":"); idx > 0 && !strings.Contains(remote, "://") {
+			remote = remote[:idx] + "/" + remote[idx+1:]
+		}
 		parts := strings.Split(remote, "/")
 		if len(parts) >= 2 {
 			return parts[len(parts)-2] + "/" + parts[len(parts)-1]
