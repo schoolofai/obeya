@@ -55,3 +55,18 @@ func gitDirExists(dir string) bool {
 	_, err := os.Stat(gitDir)
 	return err == nil
 }
+
+// FindGitRoot walks up from startDir looking for a .git directory.
+// Returns the directory containing .git, or an error if none is found.
+func FindGitRoot(startDir string) (string, error) {
+	abs, err := filepath.Abs(startDir)
+	if err != nil {
+		return "", fmt.Errorf("failed to resolve absolute path: %w", err)
+	}
+
+	if root, found := walkUpFor(abs, gitDirExists); found {
+		return root, nil
+	}
+
+	return "", fmt.Errorf("no git repository found — use 'ob init --root <path>' to specify a board location")
+}

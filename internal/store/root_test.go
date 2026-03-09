@@ -85,3 +85,43 @@ func TestFindProjectRoot_NothingFound(t *testing.T) {
 		t.Fatal("expected error when no .obeya or .git found")
 	}
 }
+
+func TestFindGitRoot_Found(t *testing.T) {
+	parent := t.TempDir()
+	os.MkdirAll(filepath.Join(parent, ".git"), 0755)
+
+	child := filepath.Join(parent, "src", "pkg")
+	os.MkdirAll(child, 0755)
+
+	root, err := store.FindGitRoot(child)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if root != parent {
+		t.Errorf("expected %s, got %s", parent, root)
+	}
+}
+
+func TestFindGitRoot_InCwd(t *testing.T) {
+	dir := t.TempDir()
+	os.MkdirAll(filepath.Join(dir, ".git"), 0755)
+
+	root, err := store.FindGitRoot(dir)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if root != dir {
+		t.Errorf("expected %s, got %s", dir, root)
+	}
+}
+
+func TestFindGitRoot_NotFound(t *testing.T) {
+	dir := t.TempDir()
+	child := filepath.Join(dir, "no-git")
+	os.MkdirAll(child, 0755)
+
+	_, err := store.FindGitRoot(child)
+	if err == nil {
+		t.Fatal("expected error when no .git found")
+	}
+}

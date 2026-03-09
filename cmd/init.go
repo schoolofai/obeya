@@ -95,19 +95,7 @@ func resolveInitRoot() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to get working directory: %w", err)
 	}
-	dir := cwd
-	for {
-		gitDir := filepath.Join(dir, ".git")
-		if _, err := os.Stat(gitDir); err == nil {
-			return dir, nil
-		}
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			break
-		}
-		dir = parent
-	}
-	return "", fmt.Errorf("no git repository found — use 'ob init --root <path>' to specify a board location")
+	return store.FindGitRoot(cwd)
 }
 
 func appendClaudeMDAt(claudePath string) error {
