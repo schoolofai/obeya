@@ -25,7 +25,7 @@ func init() {
 }
 
 func runShow(cmd *cobra.Command, args []string) error {
-	eng, err := newEngine()
+	eng, err := getEngine()
 	if err != nil {
 		return err
 	}

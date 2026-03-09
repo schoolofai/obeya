@@ -9,7 +9,6 @@ import (
 
 	"github.com/niladribose/obeya/internal/domain"
 	"github.com/niladribose/obeya/internal/engine"
-	"github.com/niladribose/obeya/internal/store"
 	"github.com/spf13/cobra"
 )
 
@@ -32,7 +31,7 @@ func init() {
 }
 
 func runList(cmd *cobra.Command, args []string) error {
-	eng, err := newEngine()
+	eng, err := getEngine()
 	if err != nil {
 		return err
 	}
@@ -63,14 +62,6 @@ func runList(cmd *cobra.Command, args []string) error {
 
 	printTree(items)
 	return nil
-}
-
-func newEngine() (*engine.Engine, error) {
-	s := store.NewJSONStore(".")
-	if !s.BoardExists() {
-		return nil, fmt.Errorf("no board found — run 'ob init' first")
-	}
-	return engine.New(s), nil
 }
 
 func buildListFilter(cmd *cobra.Command) (engine.ListFilter, error) {

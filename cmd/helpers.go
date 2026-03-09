@@ -15,7 +15,12 @@ func getStore() store.Store {
 		fmt.Fprintf(os.Stderr, "Error: cannot determine working directory: %v\n", err)
 		os.Exit(1)
 	}
-	return store.NewJSONStore(cwd)
+	root, err := store.FindProjectRoot(cwd)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
+	return store.NewJSONStore(root)
 }
 
 func getEngine() (*engine.Engine, error) {
@@ -23,7 +28,11 @@ func getEngine() (*engine.Engine, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get working directory: %w", err)
 	}
-	s := store.NewJSONStore(cwd)
+	root, err := store.FindProjectRoot(cwd)
+	if err != nil {
+		return nil, err
+	}
+	s := store.NewJSONStore(root)
 	if !s.BoardExists() {
 		return nil, fmt.Errorf("no board found — run 'ob init' first")
 	}
