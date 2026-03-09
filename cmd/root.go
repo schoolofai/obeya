@@ -13,6 +13,17 @@ var (
 	flagFormat  string
 )
 
+var (
+	appVersion = "dev"
+	appCommit  = "none"
+)
+
+func SetVersionInfo(version, commit string) {
+	appVersion = version
+	appCommit = commit
+	rootCmd.Version = version + " (" + commit + ")"
+}
+
 var rootCmd = &cobra.Command{
 	Use:   "ob",
 	Short: "Obeya — CLI Kanban board for humans and AI agents",
