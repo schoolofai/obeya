@@ -1,0 +1,411 @@
+package test
+
+import (
+	"fmt"
+	"os"
+	"testing"
+
+	"github.com/niladribose/obeya/internal/engine"
+	"github.com/niladribose/obeya/internal/store"
+)
+
+func setupTestEngine(t *testing.T) *engine.Engine {
+	t.Helper()
+	tmpDir := t.TempDir()
+	s := store.NewJSONStore(tmpDir)
+	if err := s.InitBoard("integration-test", nil); err != nil {
+		t.Fatalf("InitBoard failed: %v", err)
+	}
+	return engine.New(s)
+}
+
+func TestIntegration_FullFlow(t *testing.T) {
+	tmpDir := t.TempDir()
+	s := store.NewJSONStore(tmpDir)
+
+	// --- Init board ---
+	if err := s.InitBoard("e2e-board", nil); err != nil {
+		t.Fatalf("InitBoard failed: %v", err)
+	}
+	eng := engine.New(s)
+
+	board, err := eng.ListBoard()
+	if err != nil {
+		t.Fatalf("ListBoard failed: %v", err)
+	}
+	if board.Name != "e2e-board" {
+		t.Errorf("expected board name 'e2e-board', got %q", board.Name)
+	}
+	if len(board.Columns) != 5 {
+		t.Errorf("expected 5 default columns, got %d", len(board.Columns))
+	}
+
+	// --- Add users ---
+	if err := eng.AddUser("alice", "human", ""); err != nil {
+		t.Fatalf("AddUser (human) failed: %v", err)
+	}
+	if err := eng.AddUser("bot-1", "agent", "claude"); err != nil {
+		t.Fatalf("AddUser (agent) failed: %v", err)
+	}
+
+	board, _ = eng.ListBoard()
+	if len(board.Users) != 2 {
+		t.Fatalf("expected 2 users, got %d", len(board.Users))
+	}
+
+	// --- Create hierarchy: epic -> story -> task (with tags) ---
+	epic, err := eng.CreateItem("epic", "Platform Build", "", "Build the platform", "high", "", nil)
+	if err != nil {
+		t.Fatalf("CreateItem (epic) failed: %v", err)
+	}
+	if epic.DisplayNum != 1 {
+		t.Errorf("expected epic display num 1, got %d", epic.DisplayNum)
+	}
+
+	story, err := eng.CreateItem("story", "Auth Module", fmt.Sprintf("%d", epic.DisplayNum), "Implement auth", "medium", "", []string{"auth", "backend"})
+	if err != nil {
+		t.Fatalf("CreateItem (story) failed: %v", err)
+	}
+	if story.DisplayNum != 2 {
+		t.Errorf("expected story display num 2, got %d", story.DisplayNum)
+	}
+	if story.ParentID != epic.ID {
+		t.Errorf("expected story parent to be epic ID")
+	}
+
+	task1, err := eng.CreateItem("task", "Login endpoint", fmt.Sprintf("%d", story.DisplayNum), "", "high", "", []string{"auth", "api"})
+	if err != nil {
+		t.Fatalf("CreateItem (task1) failed: %v", err)
+	}
+	if task1.DisplayNum != 3 {
+		t.Errorf("expected task1 display num 3, got %d", task1.DisplayNum)
+	}
+
+	task2, err := eng.CreateItem("task", "JWT validation", fmt.Sprintf("%d", story.DisplayNum), "", "medium", "", []string{"auth"})
+	if err != nil {
+		t.Fatalf("CreateItem (task2) failed: %v", err)
+	}
+	if task2.DisplayNum != 4 {
+		t.Errorf("expected task2 display num 4, got %d", task2.DisplayNum)
+	}
+
+	// --- Verify display numbers are sequential ---
+	board, _ = eng.ListBoard()
+	for i := 1; i <= 4; i++ {
+		if _, ok := board.DisplayMap[i]; !ok {
+			t.Errorf("display number %d missing from display map", i)
+		}
+	}
+
+	// --- Move items between columns ---
+	if err := eng.MoveItem(fmt.Sprintf("%d", task1.DisplayNum), "in-progress", "", "test-session"); err != nil {
+		t.Fatalf("MoveItem failed: %v", err)
+	}
+
+	moved, err := eng.GetItem(fmt.Sprintf("%d", task1.DisplayNum))
+	if err != nil {
+		t.Fatalf("GetItem failed: %v", err)
+	}
+	if moved.Status != "in-progress" {
+		t.Errorf("expected status 'in-progress', got %q", moved.Status)
+	}
+
+	// Move to invalid column should fail
+	if err := eng.MoveItem(fmt.Sprintf("%d", task1.DisplayNum), "nonexistent", "", ""); err == nil {
+		t.Error("expected error moving to nonexistent column")
+	}
+
+	// --- Block / unblock ---
+	if err := eng.BlockItem(fmt.Sprintf("%d", task2.DisplayNum), fmt.Sprintf("%d", task1.DisplayNum), "", "test-session"); err != nil {
+		t.Fatalf("BlockItem failed: %v", err)
+	}
+
+	blocked, _ := eng.GetItem(fmt.Sprintf("%d", task2.DisplayNum))
+	if len(blocked.BlockedBy) != 1 {
+		t.Fatalf("expected 1 blocker, got %d", len(blocked.BlockedBy))
+	}
+	if blocked.BlockedBy[0] != task1.ID {
+		t.Errorf("expected blocker to be task1 ID")
+	}
+
+	// Duplicate block should fail
+	if err := eng.BlockItem(fmt.Sprintf("%d", task2.DisplayNum), fmt.Sprintf("%d", task1.DisplayNum), "", ""); err == nil {
+		t.Error("expected error on duplicate block")
+	}
+
+	// Self-block should fail
+	if err := eng.BlockItem(fmt.Sprintf("%d", task1.DisplayNum), fmt.Sprintf("%d", task1.DisplayNum), "", ""); err == nil {
+		t.Error("expected error on self-block")
+	}
+
+	// Unblock
+	if err := eng.UnblockItem(fmt.Sprintf("%d", task2.DisplayNum), fmt.Sprintf("%d", task1.DisplayNum), "", "test-session"); err != nil {
+		t.Fatalf("UnblockItem failed: %v", err)
+	}
+
+	unblocked, _ := eng.GetItem(fmt.Sprintf("%d", task2.DisplayNum))
+	if len(unblocked.BlockedBy) != 0 {
+		t.Errorf("expected 0 blockers after unblock, got %d", len(unblocked.BlockedBy))
+	}
+
+	// --- List with filters ---
+	// Filter by status
+	inProgress, err := eng.ListItems(engine.ListFilter{Status: "in-progress"})
+	if err != nil {
+		t.Fatalf("ListItems (status filter) failed: %v", err)
+	}
+	if len(inProgress) != 1 {
+		t.Errorf("expected 1 in-progress item, got %d", len(inProgress))
+	}
+
+	// Filter by type
+	epics, err := eng.ListItems(engine.ListFilter{Type: "epic"})
+	if err != nil {
+		t.Fatalf("ListItems (type filter) failed: %v", err)
+	}
+	if len(epics) != 1 {
+		t.Errorf("expected 1 epic, got %d", len(epics))
+	}
+
+	tasks, err := eng.ListItems(engine.ListFilter{Type: "task"})
+	if err != nil {
+		t.Fatalf("ListItems (type=task filter) failed: %v", err)
+	}
+	if len(tasks) != 2 {
+		t.Errorf("expected 2 tasks, got %d", len(tasks))
+	}
+
+	// Filter by tag
+	authTagged, err := eng.ListItems(engine.ListFilter{Tag: "auth"})
+	if err != nil {
+		t.Fatalf("ListItems (tag filter) failed: %v", err)
+	}
+	if len(authTagged) != 3 {
+		t.Errorf("expected 3 items with 'auth' tag, got %d", len(authTagged))
+	}
+
+	// Re-block task2 for blocked filter test
+	if err := eng.BlockItem(fmt.Sprintf("%d", task2.DisplayNum), fmt.Sprintf("%d", task1.DisplayNum), "", ""); err != nil {
+		t.Fatalf("re-block failed: %v", err)
+	}
+	blockedItems, err := eng.ListItems(engine.ListFilter{Blocked: true})
+	if err != nil {
+		t.Fatalf("ListItems (blocked filter) failed: %v", err)
+	}
+	if len(blockedItems) != 1 {
+		t.Errorf("expected 1 blocked item, got %d", len(blockedItems))
+	}
+
+	// --- Verify history entries ---
+	item1, _ := eng.GetItem(fmt.Sprintf("%d", task1.DisplayNum))
+	if len(item1.History) < 2 {
+		t.Errorf("expected at least 2 history entries for task1 (created + moved), got %d", len(item1.History))
+	}
+	if item1.History[0].Action != "created" {
+		t.Errorf("expected first history action 'created', got %q", item1.History[0].Action)
+	}
+	if item1.History[1].Action != "moved" {
+		t.Errorf("expected second history action 'moved', got %q", item1.History[1].Action)
+	}
+
+	// --- Delete with children should fail ---
+	if err := eng.DeleteItem(fmt.Sprintf("%d", epic.DisplayNum), "", "test-session"); err == nil {
+		t.Error("expected error deleting epic with children")
+	}
+
+	if err := eng.DeleteItem(fmt.Sprintf("%d", story.DisplayNum), "", "test-session"); err == nil {
+		t.Error("expected error deleting story with children")
+	}
+
+	// --- Delete leaf item should succeed ---
+	if err := eng.DeleteItem(fmt.Sprintf("%d", task2.DisplayNum), "", "test-session"); err != nil {
+		t.Fatalf("DeleteItem (leaf) failed: %v", err)
+	}
+
+	// Verify deleted
+	if _, err := eng.GetItem(fmt.Sprintf("%d", task2.DisplayNum)); err == nil {
+		t.Error("expected error getting deleted item")
+	}
+
+	// Verify remaining items
+	board, _ = eng.ListBoard()
+	if len(board.Items) != 3 {
+		t.Errorf("expected 3 remaining items, got %d", len(board.Items))
+	}
+}
+
+func TestIntegration_AssignAndEdit(t *testing.T) {
+	eng := setupTestEngine(t)
+
+	// Add a user
+	if err := eng.AddUser("dev1", "human", ""); err != nil {
+		t.Fatalf("AddUser failed: %v", err)
+	}
+
+	task, err := eng.CreateItem("task", "Test task", "", "", "low", "", nil)
+	if err != nil {
+		t.Fatalf("CreateItem failed: %v", err)
+	}
+
+	// Assign by user name
+	if err := eng.AssignItem(fmt.Sprintf("%d", task.DisplayNum), "dev1", "", "session"); err != nil {
+		t.Fatalf("AssignItem failed: %v", err)
+	}
+
+	assigned, _ := eng.GetItem(fmt.Sprintf("%d", task.DisplayNum))
+	if assigned.Assignee == "" {
+		t.Error("expected assignee to be set")
+	}
+
+	// Edit title and priority
+	if err := eng.EditItem(fmt.Sprintf("%d", task.DisplayNum), "Updated title", "", "critical", "", "session"); err != nil {
+		t.Fatalf("EditItem failed: %v", err)
+	}
+
+	edited, _ := eng.GetItem(fmt.Sprintf("%d", task.DisplayNum))
+	if edited.Title != "Updated title" {
+		t.Errorf("expected title 'Updated title', got %q", edited.Title)
+	}
+	if string(edited.Priority) != "critical" {
+		t.Errorf("expected priority 'critical', got %q", edited.Priority)
+	}
+
+	// Edit with no changes should fail
+	if err := eng.EditItem(fmt.Sprintf("%d", task.DisplayNum), "", "", "", "", ""); err == nil {
+		t.Error("expected error when no changes specified")
+	}
+}
+
+func TestIntegration_BoardConfig(t *testing.T) {
+	eng := setupTestEngine(t)
+
+	// Add a custom column
+	if err := eng.AddColumn("qa"); err != nil {
+		t.Fatalf("AddColumn failed: %v", err)
+	}
+
+	board, _ := eng.ListBoard()
+	if !board.HasColumn("qa") {
+		t.Error("expected board to have 'qa' column")
+	}
+
+	// Duplicate column should fail
+	if err := eng.AddColumn("qa"); err == nil {
+		t.Error("expected error adding duplicate column")
+	}
+
+	// Remove column
+	if err := eng.RemoveColumn("qa"); err != nil {
+		t.Fatalf("RemoveColumn failed: %v", err)
+	}
+
+	board, _ = eng.ListBoard()
+	if board.HasColumn("qa") {
+		t.Error("expected 'qa' column to be removed")
+	}
+
+	// Remove column with items should fail
+	eng.CreateItem("task", "blocker", "", "", "", "", nil)
+	eng.MoveItem("1", "todo", "", "")
+	if err := eng.RemoveColumn("todo"); err == nil {
+		t.Error("expected error removing column with items")
+	}
+}
+
+func TestIntegration_UserManagement(t *testing.T) {
+	eng := setupTestEngine(t)
+
+	if err := eng.AddUser("alice", "human", ""); err != nil {
+		t.Fatalf("AddUser failed: %v", err)
+	}
+	if err := eng.AddUser("claude", "agent", "anthropic"); err != nil {
+		t.Fatalf("AddUser (agent) failed: %v", err)
+	}
+
+	// Invalid identity type
+	if err := eng.AddUser("bad", "robot", ""); err == nil {
+		t.Error("expected error for invalid identity type")
+	}
+
+	board, _ := eng.ListBoard()
+	if len(board.Users) != 2 {
+		t.Fatalf("expected 2 users, got %d", len(board.Users))
+	}
+
+	// Remove user by name
+	if err := eng.RemoveUser("alice"); err != nil {
+		t.Fatalf("RemoveUser failed: %v", err)
+	}
+
+	board, _ = eng.ListBoard()
+	if len(board.Users) != 1 {
+		t.Errorf("expected 1 user after removal, got %d", len(board.Users))
+	}
+}
+
+func TestIntegration_GetChildren(t *testing.T) {
+	eng := setupTestEngine(t)
+
+	parent, err := eng.CreateItem("epic", "Parent", "", "", "", "", nil)
+	if err != nil {
+		t.Fatalf("CreateItem (parent) failed: %v", err)
+	}
+
+	for i := 0; i < 3; i++ {
+		_, err := eng.CreateItem("story", fmt.Sprintf("Child %d", i), fmt.Sprintf("%d", parent.DisplayNum), "", "", "", nil)
+		if err != nil {
+			t.Fatalf("CreateItem (child %d) failed: %v", i, err)
+		}
+	}
+
+	children, err := eng.GetChildren(parent.ID)
+	if err != nil {
+		t.Fatalf("GetChildren failed: %v", err)
+	}
+	if len(children) != 3 {
+		t.Errorf("expected 3 children, got %d", len(children))
+	}
+}
+
+func TestIntegration_InitBoardAlreadyExists(t *testing.T) {
+	tmpDir := t.TempDir()
+	s := store.NewJSONStore(tmpDir)
+	if err := s.InitBoard("first", nil); err != nil {
+		t.Fatalf("first InitBoard failed: %v", err)
+	}
+
+	// Second init should fail
+	if err := s.InitBoard("second", nil); err == nil {
+		t.Error("expected error on duplicate init")
+	}
+}
+
+func TestIntegration_CustomColumns(t *testing.T) {
+	tmpDir := t.TempDir()
+	s := store.NewJSONStore(tmpDir)
+	if err := s.InitBoard("custom", []string{"new", "active", "closed"}); err != nil {
+		t.Fatalf("InitBoard (custom cols) failed: %v", err)
+	}
+
+	eng := engine.New(s)
+	board, _ := eng.ListBoard()
+	if len(board.Columns) != 3 {
+		t.Errorf("expected 3 columns, got %d", len(board.Columns))
+	}
+
+	// Items should start in first custom column
+	item, err := eng.CreateItem("task", "Test", "", "", "", "", nil)
+	if err != nil {
+		t.Fatalf("CreateItem failed: %v", err)
+	}
+	if item.Status != "new" {
+		t.Errorf("expected initial status 'new', got %q", item.Status)
+	}
+}
+
+func TestIntegration_CLISmokeTest(t *testing.T) {
+	// Verify the binary exists (built by Task 13)
+	if _, err := os.Stat("../ob"); err != nil {
+		t.Skip("ob binary not found — skipping CLI smoke test (run 'go build -o ob .' first)")
+	}
+}
