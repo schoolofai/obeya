@@ -87,6 +87,13 @@ type Plan struct {
 	UpdatedAt   time.Time `json:"updated_at"`
 }
 
+type LinkedProject struct {
+	Name      string `json:"name"`
+	LocalPath string `json:"local_path"`
+	GitRemote string `json:"git_remote"`
+	LinkedAt  string `json:"linked_at"`
+}
+
 type Item struct {
 	ID          string         `json:"id"`
 	DisplayNum  int            `json:"display_num"`
@@ -99,23 +106,25 @@ type Item struct {
 	ParentID    string         `json:"parent_id,omitempty"`
 	BlockedBy   []string       `json:"blocked_by,omitempty"`
 	Tags        []string       `json:"tags,omitempty"`
+	Project     string         `json:"project,omitempty"`
 	CreatedAt   time.Time      `json:"created_at"`
 	UpdatedAt   time.Time      `json:"updated_at"`
 	History     []ChangeRecord `json:"history,omitempty"`
 }
 
 type Board struct {
-	Version     int                  `json:"version"`
-	Name        string               `json:"name"`
-	Columns     []Column             `json:"columns"`
-	Items       map[string]*Item     `json:"items"`
-	DisplayMap  map[int]string       `json:"display_map"`
-	NextDisplay int                  `json:"next_display"`
-	Users       map[string]*Identity `json:"users"`
-	Plans       map[string]*Plan     `json:"plans"`
-	AgentRole   string               `json:"agent_role"`
-	CreatedAt   time.Time            `json:"created_at"`
-	UpdatedAt   time.Time            `json:"updated_at"`
+	Version     int                        `json:"version"`
+	Name        string                     `json:"name"`
+	Columns     []Column                   `json:"columns"`
+	Items       map[string]*Item           `json:"items"`
+	DisplayMap  map[int]string             `json:"display_map"`
+	NextDisplay int                        `json:"next_display"`
+	Users       map[string]*Identity       `json:"users"`
+	Plans       map[string]*Plan           `json:"plans"`
+	Projects    map[string]*LinkedProject  `json:"projects"`
+	AgentRole   string                     `json:"agent_role"`
+	CreatedAt   time.Time                  `json:"created_at"`
+	UpdatedAt   time.Time                  `json:"updated_at"`
 }
 
 var defaultColumns = []string{"backlog", "todo", "in-progress", "review", "done"}
@@ -139,6 +148,7 @@ func NewBoardWithColumns(name string, columnNames []string) *Board {
 		NextDisplay: 1,
 		Users:       make(map[string]*Identity),
 		Plans:       make(map[string]*Plan),
+		Projects:    make(map[string]*LinkedProject),
 		AgentRole:   "admin",
 		CreatedAt:   now,
 		UpdatedAt:   now,
