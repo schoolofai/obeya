@@ -3,6 +3,7 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/niladribose/obeya/internal/domain"
@@ -15,6 +16,7 @@ var (
 	createAssign   string
 	createTags     string
 	createDesc     string
+	createBodyFile string
 )
 
 var createCmd = &cobra.Command{
@@ -25,6 +27,17 @@ var createCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		itemType := args[0]
 		title := args[1]
+
+		if createBodyFile != "" && createDesc != "" {
+			return fmt.Errorf("--body-file and -d/--description are mutually exclusive")
+		}
+		if createBodyFile != "" {
+			data, err := os.ReadFile(createBodyFile)
+			if err != nil {
+				return fmt.Errorf("failed to read body file %q: %w", createBodyFile, err)
+			}
+			createDesc = string(data)
+		}
 
 		tags := parseTags(createTags)
 
@@ -47,6 +60,7 @@ func init() {
 	createCmd.Flags().StringVar(&createAssign, "assign", "", "assign to user ID")
 	createCmd.Flags().StringVar(&createTags, "tag", "", "comma-separated tags")
 	createCmd.Flags().StringVarP(&createDesc, "description", "d", "", "item description")
+	createCmd.Flags().StringVar(&createBodyFile, "body-file", "", "read description from file")
 	rootCmd.AddCommand(createCmd)
 }
 

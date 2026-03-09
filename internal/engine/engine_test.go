@@ -358,6 +358,170 @@ func TestListItems_WithFilter(t *testing.T) {
 	}
 }
 
+func TestCreatePlan(t *testing.T) {
+	eng := setupEngine(t)
+
+	plan, err := eng.CreatePlan("Design Doc", "Some content", "design.md")
+	if err != nil {
+		t.Fatalf("CreatePlan failed: %v", err)
+	}
+
+	if plan.Title != "Design Doc" {
+		t.Errorf("expected title 'Design Doc', got %q", plan.Title)
+	}
+	if plan.DisplayNum != 1 {
+		t.Errorf("expected display num 1, got %d", plan.DisplayNum)
+	}
+	if plan.Content != "Some content" {
+		t.Errorf("expected content 'Some content', got %q", plan.Content)
+	}
+	if plan.SourceFile != "design.md" {
+		t.Errorf("expected source file 'design.md', got %q", plan.SourceFile)
+	}
+}
+
+func TestCreatePlan_EmptyTitle(t *testing.T) {
+	eng := setupEngine(t)
+
+	_, err := eng.CreatePlan("", "content", "")
+	if err == nil {
+		t.Error("expected error for empty title")
+	}
+}
+
+func TestImportPlan(t *testing.T) {
+	eng := setupEngine(t)
+
+	item1, _ := eng.CreateItem("task", "Task 1", "", "", "medium", "", nil)
+	item2, _ := eng.CreateItem("task", "Task 2", "", "", "medium", "", nil)
+
+	content := "# My Plan\n\nThis is the plan content."
+	plan, err := eng.ImportPlan(content, "plan.md", []string{item1.ID, item2.ID})
+	if err != nil {
+		t.Fatalf("ImportPlan failed: %v", err)
+	}
+
+	if plan.Title != "My Plan" {
+		t.Errorf("expected title 'My Plan', got %q", plan.Title)
+	}
+	if len(plan.LinkedItems) != 2 {
+		t.Errorf("expected 2 linked items, got %d", len(plan.LinkedItems))
+	}
+}
+
+func TestImportPlan_NoHeading(t *testing.T) {
+	eng := setupEngine(t)
+
+	_, err := eng.ImportPlan("no heading here", "", nil)
+	if err == nil {
+		t.Error("expected error when no markdown heading found")
+	}
+}
+
+func TestLinkUnlinkPlan(t *testing.T) {
+	eng := setupEngine(t)
+
+	plan, _ := eng.CreatePlan("Plan", "content", "")
+	item, _ := eng.CreateItem("task", "Task", "", "", "medium", "", nil)
+
+	err := eng.LinkPlan(plan.ID, []string{item.ID})
+	if err != nil {
+		t.Fatalf("LinkPlan failed: %v", err)
+	}
+
+	updated, _ := eng.ShowPlan(plan.ID)
+	if len(updated.LinkedItems) != 1 {
+		t.Errorf("expected 1 linked item, got %d", len(updated.LinkedItems))
+	}
+
+	err = eng.UnlinkPlan(plan.ID, []string{item.ID})
+	if err != nil {
+		t.Fatalf("UnlinkPlan failed: %v", err)
+	}
+
+	updated, _ = eng.ShowPlan(plan.ID)
+	if len(updated.LinkedItems) != 0 {
+		t.Errorf("expected 0 linked items, got %d", len(updated.LinkedItems))
+	}
+}
+
+func TestDeletePlan(t *testing.T) {
+	eng := setupEngine(t)
+
+	plan, _ := eng.CreatePlan("Plan", "content", "")
+
+	err := eng.DeletePlan(plan.ID)
+	if err != nil {
+		t.Fatalf("DeletePlan failed: %v", err)
+	}
+
+	_, err = eng.ShowPlan(plan.ID)
+	if err == nil {
+		t.Error("expected error showing deleted plan")
+	}
+}
+
+func TestUpdatePlan(t *testing.T) {
+	eng := setupEngine(t)
+
+	plan, _ := eng.CreatePlan("Old Title", "old content", "")
+
+	err := eng.UpdatePlan(plan.ID, "New Title", "new content")
+	if err != nil {
+		t.Fatalf("UpdatePlan failed: %v", err)
+	}
+
+	updated, _ := eng.ShowPlan(plan.ID)
+	if updated.Title != "New Title" {
+		t.Errorf("expected title 'New Title', got %q", updated.Title)
+	}
+	if updated.Content != "new content" {
+		t.Errorf("expected content 'new content', got %q", updated.Content)
+	}
+}
+
+func TestUpdatePlan_NoChanges(t *testing.T) {
+	eng := setupEngine(t)
+
+	plan, _ := eng.CreatePlan("Title", "content", "")
+
+	err := eng.UpdatePlan(plan.ID, "", "")
+	if err == nil {
+		t.Error("expected error when no changes specified")
+	}
+}
+
+func TestListPlans(t *testing.T) {
+	eng := setupEngine(t)
+
+	_, _ = eng.CreatePlan("Plan A", "content a", "")
+	_, _ = eng.CreatePlan("Plan B", "content b", "")
+
+	plans, err := eng.ListPlans()
+	if err != nil {
+		t.Fatalf("ListPlans failed: %v", err)
+	}
+	if len(plans) != 2 {
+		t.Errorf("expected 2 plans, got %d", len(plans))
+	}
+}
+
+func TestPlansForItem(t *testing.T) {
+	eng := setupEngine(t)
+
+	item, _ := eng.CreateItem("task", "Task", "", "", "medium", "", nil)
+	plan, _ := eng.CreatePlan("Plan", "content", "")
+	_ = eng.LinkPlan(plan.ID, []string{item.ID})
+
+	plans, err := eng.PlansForItem(item.ID)
+	if err != nil {
+		t.Fatalf("PlansForItem failed: %v", err)
+	}
+	if len(plans) != 1 {
+		t.Errorf("expected 1 plan, got %d", len(plans))
+	}
+}
+
 func TestGetChildren(t *testing.T) {
 	eng := setupEngine(t)
 

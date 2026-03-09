@@ -103,6 +103,13 @@ func TestNewBoardCustomColumns(t *testing.T) {
 	}
 }
 
+func TestBoard_PlansMapInitialized(t *testing.T) {
+	board := domain.NewBoard("test")
+	if board.Plans == nil {
+		t.Fatal("expected Plans map to be initialized")
+	}
+}
+
 func TestBoardHasColumn(t *testing.T) {
 	board := domain.NewBoard("test")
 	if !board.HasColumn("backlog") {

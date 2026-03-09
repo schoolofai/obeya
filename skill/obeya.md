@@ -164,6 +164,35 @@ ob list --tag backend --format json
 ob list --blocked --format json
 ```
 
+### Plan Management
+
+```bash
+# Create an empty plan
+ob plan create --title "Feature Plan"
+
+# Import plan from file and link to items
+ob plan import docs/plans/plan.md --link 1,2,3
+
+# Update plan content
+ob plan update <plan-id> docs/plans/updated.md
+ob plan update <plan-id> --title "New Title"
+
+# Show plan details
+ob plan show <plan-id>
+ob plan show <plan-id> --format json
+
+# List all plans
+ob plan list
+ob plan list --format json
+
+# Link/unlink items
+ob plan link <plan-id> --to 4,5,6
+ob plan unlink <plan-id> --from 3
+
+# Delete a plan
+ob plan delete <plan-id>
+```
+
 ### Showing Item Details
 
 ```bash
@@ -226,6 +255,65 @@ If all children of a parent story are done, move the parent to done as well:
 ob list --format json   # Check if all sibling tasks are done
 ob move <parent-id> done
 ```
+
+### 6. Rich Task Descriptions
+
+When creating tasks, provide detailed descriptions using `--body-file`:
+
+1. Write the description to a temporary file:
+
+```bash
+cat > /tmp/task-desc.md << 'TASKEOF'
+## What This Task Involves
+
+Implement JWT token validation middleware for the auth service.
+
+## Files
+
+- Create: `internal/auth/jwt.go`
+- Modify: `internal/middleware/auth.go:45-60`
+- Test: `internal/auth/jwt_test.go`
+
+## Acceptance Criteria
+
+- Validates token signature and expiry
+- Returns 401 for invalid/expired tokens
+- Extracts user ID from claims
+TASKEOF
+```
+
+2. Create the task with the description file:
+
+```bash
+ob create task "Add JWT validation" -p 2 --body-file /tmp/task-desc.md --priority high
+```
+
+Short one-line descriptions (via `-d`) are acceptable only for trivial tasks. For any task that another agent might pick up, use `--body-file` with full context.
+
+### 7. Plan Management
+
+After creating a task breakdown from an implementation plan:
+
+1. Import the plan document and link it to all related items:
+
+```bash
+ob plan import docs/plans/your-plan.md --link 1,2,3,4,5
+```
+
+2. When creating additional items related to an existing plan:
+
+```bash
+ob plan link <plan-id> --to <new-item-id>
+```
+
+3. Query plans:
+
+```bash
+ob plan list --format json
+ob plan show <plan-id> --format json
+```
+
+Plans provide full context for anyone (human or agent) picking up a task. Always import your implementation plan after creating the task breakdown.
 
 ## ID Resolution
 

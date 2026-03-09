@@ -403,6 +403,100 @@ func TestIntegration_CustomColumns(t *testing.T) {
 	}
 }
 
+func TestIntegration_PlanWorkflow(t *testing.T) {
+	eng := setupTestEngine(t)
+
+	// Create items
+	epic, err := eng.CreateItem("epic", "Auth System", "", "", "high", "", nil)
+	if err != nil {
+		t.Fatalf("CreateItem epic failed: %v", err)
+	}
+	task, err := eng.CreateItem("task", "JWT Validation", fmt.Sprintf("%d", epic.DisplayNum), "", "medium", "", nil)
+	if err != nil {
+		t.Fatalf("CreateItem task failed: %v", err)
+	}
+
+	// Import plan
+	content := "# Auth Implementation Plan\n\nBuild JWT auth with middleware."
+	plan, err := eng.ImportPlan(content, "docs/plans/auth-plan.md", []string{
+		fmt.Sprintf("%d", epic.DisplayNum),
+		fmt.Sprintf("%d", task.DisplayNum),
+	})
+	if err != nil {
+		t.Fatalf("ImportPlan failed: %v", err)
+	}
+	if plan.Title != "Auth Implementation Plan" {
+		t.Errorf("expected title from markdown heading, got %q", plan.Title)
+	}
+	if len(plan.LinkedItems) != 2 {
+		t.Errorf("expected 2 linked items, got %d", len(plan.LinkedItems))
+	}
+
+	// Show plan
+	shown, err := eng.ShowPlan(fmt.Sprintf("%d", plan.DisplayNum))
+	if err != nil {
+		t.Fatalf("ShowPlan failed: %v", err)
+	}
+	if shown.Content != content {
+		t.Error("plan content mismatch")
+	}
+
+	// List plans
+	plans, err := eng.ListPlans()
+	if err != nil {
+		t.Fatalf("ListPlans failed: %v", err)
+	}
+	if len(plans) != 1 {
+		t.Errorf("expected 1 plan, got %d", len(plans))
+	}
+
+	// Link additional item
+	task2, _ := eng.CreateItem("task", "Middleware", fmt.Sprintf("%d", epic.DisplayNum), "", "medium", "", nil)
+	if err := eng.LinkPlan(fmt.Sprintf("%d", plan.DisplayNum), []string{fmt.Sprintf("%d", task2.DisplayNum)}); err != nil {
+		t.Fatalf("LinkPlan failed: %v", err)
+	}
+	shown, _ = eng.ShowPlan(fmt.Sprintf("%d", plan.DisplayNum))
+	if len(shown.LinkedItems) != 3 {
+		t.Errorf("expected 3 linked items after link, got %d", len(shown.LinkedItems))
+	}
+
+	// Unlink
+	if err := eng.UnlinkPlan(fmt.Sprintf("%d", plan.DisplayNum), []string{fmt.Sprintf("%d", task.DisplayNum)}); err != nil {
+		t.Fatalf("UnlinkPlan failed: %v", err)
+	}
+	shown, _ = eng.ShowPlan(fmt.Sprintf("%d", plan.DisplayNum))
+	if len(shown.LinkedItems) != 2 {
+		t.Errorf("expected 2 linked items after unlink, got %d", len(shown.LinkedItems))
+	}
+
+	// PlansForItem
+	itemPlans, err := eng.PlansForItem(epic.ID)
+	if err != nil {
+		t.Fatalf("PlansForItem failed: %v", err)
+	}
+	if len(itemPlans) != 1 {
+		t.Errorf("expected 1 plan for epic, got %d", len(itemPlans))
+	}
+
+	// Update plan
+	if err := eng.UpdatePlan(fmt.Sprintf("%d", plan.DisplayNum), "Updated Auth Plan", "# Updated\n\nNew content."); err != nil {
+		t.Fatalf("UpdatePlan failed: %v", err)
+	}
+	shown, _ = eng.ShowPlan(fmt.Sprintf("%d", plan.DisplayNum))
+	if shown.Title != "Updated Auth Plan" {
+		t.Errorf("expected updated title, got %q", shown.Title)
+	}
+
+	// Delete plan
+	if err := eng.DeletePlan(fmt.Sprintf("%d", plan.DisplayNum)); err != nil {
+		t.Fatalf("DeletePlan failed: %v", err)
+	}
+	_, err = eng.ShowPlan(fmt.Sprintf("%d", plan.DisplayNum))
+	if err == nil {
+		t.Error("expected error showing deleted plan")
+	}
+}
+
 func TestIntegration_CLISmokeTest(t *testing.T) {
 	// Verify the binary exists (built by Task 13)
 	if _, err := os.Stat("../ob"); err != nil {

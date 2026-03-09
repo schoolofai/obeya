@@ -76,6 +76,17 @@ type Identity struct {
 	Provider string       `json:"provider"`
 }
 
+type Plan struct {
+	ID          string    `json:"id"`
+	DisplayNum  int       `json:"display_num"`
+	Title       string    `json:"title"`
+	Content     string    `json:"content"`
+	SourceFile  string    `json:"source_file,omitempty"`
+	LinkedItems []string  `json:"linked_items"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
 type Item struct {
 	ID          string         `json:"id"`
 	DisplayNum  int            `json:"display_num"`
@@ -101,6 +112,7 @@ type Board struct {
 	DisplayMap  map[int]string       `json:"display_map"`
 	NextDisplay int                  `json:"next_display"`
 	Users       map[string]*Identity `json:"users"`
+	Plans       map[string]*Plan     `json:"plans"`
 	AgentRole   string               `json:"agent_role"`
 	CreatedAt   time.Time            `json:"created_at"`
 	UpdatedAt   time.Time            `json:"updated_at"`
@@ -126,6 +138,7 @@ func NewBoardWithColumns(name string, columnNames []string) *Board {
 		DisplayMap:  make(map[int]string),
 		NextDisplay: 1,
 		Users:       make(map[string]*Identity),
+		Plans:       make(map[string]*Plan),
 		AgentRole:   "admin",
 		CreatedAt:   now,
 		UpdatedAt:   now,

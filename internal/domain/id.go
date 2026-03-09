@@ -70,6 +70,40 @@ func (b *Board) userIDs() []string {
 	return ids
 }
 
+// ResolvePlanID resolves a user-provided reference to a plan ID.
+func (b *Board) ResolvePlanID(ref string) (string, error) {
+	// Try display number first
+	if num, err := strconv.Atoi(ref); err == nil {
+		if id, ok := b.DisplayMap[num]; ok {
+			if _, isPlan := b.Plans[id]; isPlan {
+				return id, nil
+			}
+			return "", fmt.Errorf("item #%d is not a plan", num)
+		}
+	}
+
+	// Try exact ID match
+	if _, ok := b.Plans[ref]; ok {
+		return ref, nil
+	}
+
+	// Try prefix match
+	var matches []string
+	for id := range b.Plans {
+		if len(id) >= len(ref) && id[:len(ref)] == ref {
+			matches = append(matches, id)
+		}
+	}
+	switch len(matches) {
+	case 0:
+		return "", fmt.Errorf("plan not found: %s", ref)
+	case 1:
+		return matches[0], nil
+	default:
+		return "", fmt.Errorf("ambiguous plan reference %q — matches %d plans", ref, len(matches))
+	}
+}
+
 func (b *Board) resolveByPrefix(ref string, ids []string) (string, error) {
 	var matches []string
 	for _, id := range ids {

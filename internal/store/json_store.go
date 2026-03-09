@@ -67,6 +67,10 @@ func (s *JSONStore) LoadBoard() (*domain.Board, error) {
 		return nil, fmt.Errorf("failed to parse board file: %w", err)
 	}
 
+	if board.Plans == nil {
+		board.Plans = make(map[string]*domain.Plan)
+	}
+
 	return &board, nil
 }
 
