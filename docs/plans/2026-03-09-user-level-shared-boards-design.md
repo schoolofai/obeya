@@ -63,7 +63,11 @@ Project is set automatically on task creation based on which linked project the 
 - Registers project in board's `projects` map
 - Errors if already linked: "This project is already linked to board '<name>'."
 - Errors if board doesn't exist: "Board '<name>' not found. Run `ob init --shared <name>` first."
-- Errors if local board exists: "This project has a local board. Run `ob link --replace <name>` to switch to a shared board."
+- If local board exists with tasks: prompts "This project has N tasks on a local board. Migrate them to '<name>'? [y/n]"
+  - If yes: copies all items to global board, tags each with project name, remaps display numbers, renames `.obeya/` to `.obeya-local-backup/`
+  - If no: errors out, no partial state
+  - `--migrate` flag skips the prompt (for scripting/agents)
+- If local board exists but is empty: migrates silently (nothing to lose)
 
 ### `ob unlink`
 
@@ -112,9 +116,12 @@ None found: error
 - Two projects with same directory name on same board → fall back to `<remote-org>/<repo-name>` as project name
 - Project with no git remote → use directory name, `git_remote` is empty string
 
-**Migration:**
-- Existing local boards unaffected, no automatic migration
-- Manual: copy `board.json` then `ob link`. Dedicated `ob migrate` command is YAGNI for now.
+**Migration (on link):**
+- `ob link` detects local `.obeya/board.json` and offers to migrate tasks to the global board
+- Migration copies items, re-tags with project name, remaps display numbers to avoid collisions
+- Local board renamed to `.obeya-local-backup/` (not deleted) for safety
+- `ob unlink` does NOT reverse migration — tasks stay on the global board
+- No ongoing sync — migration is a one-time operation
 
 **Concurrency:**
 - Same `board.lock` file-based locking. Multiple agents across projects serialized by lock.
