@@ -217,6 +217,43 @@ func (e *Engine) RemoveUser(ref string) error {
 	})
 }
 
+func (e *Engine) AddColumn(name string) error {
+	return e.store.Transaction(func(board *domain.Board) error {
+		if board.HasColumn(name) {
+			return fmt.Errorf("column %q already exists", name)
+		}
+		board.Columns = append(board.Columns, domain.Column{Name: name})
+		return nil
+	})
+}
+
+func (e *Engine) RemoveColumn(name string) error {
+	return e.store.Transaction(func(board *domain.Board) error {
+		if !board.HasColumn(name) {
+			return fmt.Errorf("column %q does not exist", name)
+		}
+		if columnHasItems(board, name) {
+			return fmt.Errorf("column %q has items — move or delete them first", name)
+		}
+		board.Columns = filterColumns(board.Columns, name)
+		return nil
+	})
+}
+
+func (e *Engine) ReorderColumns(names []string) error {
+	return e.store.Transaction(func(board *domain.Board) error {
+		if len(names) != len(board.Columns) {
+			return fmt.Errorf("must specify all %d columns, got %d", len(board.Columns), len(names))
+		}
+		reordered, err := buildReorderedColumns(board, names)
+		if err != nil {
+			return err
+		}
+		board.Columns = reordered
+		return nil
+	})
+}
+
 // --- helpers ---
 
 func validateCreateInput(itemType, title, priority string) error {
@@ -351,4 +388,40 @@ func columnNames(board *domain.Board) string {
 		names += c.Name
 	}
 	return names
+}
+
+func columnHasItems(board *domain.Board, name string) bool {
+	for _, item := range board.Items {
+		if item.Status == name {
+			return true
+		}
+	}
+	return false
+}
+
+func filterColumns(cols []domain.Column, name string) []domain.Column {
+	filtered := make([]domain.Column, 0, len(cols)-1)
+	for _, c := range cols {
+		if c.Name != name {
+			filtered = append(filtered, c)
+		}
+	}
+	return filtered
+}
+
+func buildReorderedColumns(board *domain.Board, names []string) ([]domain.Column, error) {
+	colMap := make(map[string]domain.Column, len(board.Columns))
+	for _, c := range board.Columns {
+		colMap[c.Name] = c
+	}
+
+	reordered := make([]domain.Column, 0, len(names))
+	for _, name := range names {
+		col, ok := colMap[name]
+		if !ok {
+			return nil, fmt.Errorf("unknown column %q", name)
+		}
+		reordered = append(reordered, col)
+	}
+	return reordered, nil
 }
