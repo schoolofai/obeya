@@ -16,7 +16,7 @@ var tuiCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		model := tui.New(eng)
+		model := tui.NewApp(eng)
 
 		p := tea.NewProgram(model, tea.WithAltScreen())
 		if _, err := p.Run(); err != nil {
