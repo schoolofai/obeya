@@ -4,16 +4,47 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
+// SharedBoardDir returns the path for a named shared board under the obeya home.
+func SharedBoardDir(obeyaHome, boardName string) string {
+	return filepath.Join(obeyaHome, "boards", boardName)
+}
+
+// ObeyaHome returns the default obeya home directory (~/.obeya).
+func ObeyaHome() (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("failed to determine home directory: %w", err)
+	}
+	return filepath.Join(home, ".obeya"), nil
+}
+
 // FindProjectRoot walks up from startDir looking for the project root.
-// First pass: looks for .obeya/board.json (existing board).
-// Second pass: looks for .git (git repository root).
-// Returns an error if neither is found.
+// Pass 0: looks for .obeya-link (shared board link).
+// Pass 1: looks for .obeya/board.json (existing board).
+// Pass 2: looks for .git (git repository root).
+// Returns an error if none is found.
 func FindProjectRoot(startDir string) (string, error) {
+	obeyaHome, err := ObeyaHome()
+	if err != nil {
+		return "", err
+	}
+	return FindProjectRootWithHome(startDir, obeyaHome)
+}
+
+// FindProjectRootWithHome is like FindProjectRoot but accepts an explicit obeya home
+// directory for testing.
+func FindProjectRootWithHome(startDir, obeyaHome string) (string, error) {
 	abs, err := filepath.Abs(startDir)
 	if err != nil {
 		return "", fmt.Errorf("failed to resolve absolute path: %w", err)
+	}
+
+	// Pass 0: walk up looking for .obeya-link
+	if linkDir, found := walkUpFor(abs, obeyaLinkExists); found {
+		return resolveLink(linkDir, obeyaHome)
 	}
 
 	// Pass 1: walk up looking for .obeya/board.json
@@ -54,6 +85,31 @@ func gitDirExists(dir string) bool {
 	gitDir := filepath.Join(dir, ".git")
 	_, err := os.Stat(gitDir)
 	return err == nil
+}
+
+func obeyaLinkExists(dir string) bool {
+	linkFile := filepath.Join(dir, ".obeya-link")
+	_, err := os.Stat(linkFile)
+	return err == nil
+}
+
+func resolveLink(dir, obeyaHome string) (string, error) {
+	linkFile := filepath.Join(dir, ".obeya-link")
+	data, err := os.ReadFile(linkFile)
+	if err != nil {
+		return "", fmt.Errorf("failed to read .obeya-link: %w", err)
+	}
+	boardName := strings.TrimSpace(string(data))
+	if boardName == "" {
+		return "", fmt.Errorf(".obeya-link file is empty")
+	}
+
+	boardDir := SharedBoardDir(obeyaHome, boardName)
+	boardFile := filepath.Join(boardDir, "board.json")
+	if _, err := os.Stat(boardFile); err != nil {
+		return "", fmt.Errorf("linked board %q not found at %s — run 'ob unlink' to remove the stale link", boardName, boardDir)
+	}
+	return boardDir, nil
 }
 
 // FindGitRoot walks up from startDir looking for a .git directory.

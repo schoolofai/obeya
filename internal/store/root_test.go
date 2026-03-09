@@ -125,3 +125,85 @@ func TestFindGitRoot_NotFound(t *testing.T) {
 		t.Fatal("expected error when no .git found")
 	}
 }
+
+func TestFindProjectRoot_ObeyaLinkInCwd(t *testing.T) {
+	homeDir := t.TempDir()
+	boardDir := filepath.Join(homeDir, "boards", "myboard")
+	os.MkdirAll(boardDir, 0755)
+	os.WriteFile(filepath.Join(boardDir, "board.json"), []byte("{}"), 0644)
+
+	projectDir := t.TempDir()
+	os.MkdirAll(filepath.Join(projectDir, ".git"), 0755)
+	os.WriteFile(filepath.Join(projectDir, ".obeya-link"), []byte("myboard"), 0644)
+
+	root, err := store.FindProjectRootWithHome(projectDir, homeDir)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if root != boardDir {
+		t.Errorf("expected %s, got %s", boardDir, root)
+	}
+}
+
+func TestFindProjectRoot_ObeyaLinkInParent(t *testing.T) {
+	homeDir := t.TempDir()
+	boardDir := filepath.Join(homeDir, "boards", "myboard")
+	os.MkdirAll(boardDir, 0755)
+	os.WriteFile(filepath.Join(boardDir, "board.json"), []byte("{}"), 0644)
+
+	projectDir := t.TempDir()
+	os.MkdirAll(filepath.Join(projectDir, ".git"), 0755)
+	os.WriteFile(filepath.Join(projectDir, ".obeya-link"), []byte("myboard"), 0644)
+
+	child := filepath.Join(projectDir, "src", "pkg")
+	os.MkdirAll(child, 0755)
+
+	root, err := store.FindProjectRootWithHome(child, homeDir)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if root != boardDir {
+		t.Errorf("expected %s, got %s", boardDir, root)
+	}
+}
+
+func TestFindProjectRoot_ObeyaLinkTakesPrecedenceOverLocal(t *testing.T) {
+	homeDir := t.TempDir()
+	boardDir := filepath.Join(homeDir, "boards", "myboard")
+	os.MkdirAll(boardDir, 0755)
+	os.WriteFile(filepath.Join(boardDir, "board.json"), []byte("{}"), 0644)
+
+	projectDir := t.TempDir()
+	os.WriteFile(filepath.Join(projectDir, ".obeya-link"), []byte("myboard"), 0644)
+	os.MkdirAll(filepath.Join(projectDir, ".obeya"), 0755)
+	os.WriteFile(filepath.Join(projectDir, ".obeya", "board.json"), []byte("{}"), 0644)
+
+	root, err := store.FindProjectRootWithHome(projectDir, homeDir)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if root != boardDir {
+		t.Errorf("expected linked board %s, got %s", boardDir, root)
+	}
+}
+
+func TestFindProjectRoot_StaleLink(t *testing.T) {
+	homeDir := t.TempDir()
+
+	projectDir := t.TempDir()
+	os.WriteFile(filepath.Join(projectDir, ".obeya-link"), []byte("ghost-board"), 0644)
+
+	_, err := store.FindProjectRootWithHome(projectDir, homeDir)
+	if err == nil {
+		t.Fatal("expected error for stale .obeya-link")
+	}
+}
+
+func TestSharedBoardDir(t *testing.T) {
+	home := "/home/testuser"
+	result := store.SharedBoardDir(home, "client-work")
+	expected := "/home/testuser/boards/client-work"
+	if result != expected {
+		t.Errorf("expected %s, got %s", expected, result)
+	}
+}
