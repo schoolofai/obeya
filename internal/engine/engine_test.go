@@ -1,0 +1,375 @@
+package engine_test
+
+import (
+	"testing"
+
+	"github.com/niladribose/obeya/internal/engine"
+	"github.com/niladribose/obeya/internal/store"
+)
+
+func setupEngine(t *testing.T) *engine.Engine {
+	t.Helper()
+	dir := t.TempDir()
+	s := store.NewJSONStore(dir)
+	_ = s.InitBoard("test", nil)
+	return engine.New(s)
+}
+
+func TestCreateItem(t *testing.T) {
+	eng := setupEngine(t)
+
+	item, err := eng.CreateItem("epic", "Build auth system", "", "", "medium", "", nil)
+	if err != nil {
+		t.Fatalf("CreateItem failed: %v", err)
+	}
+
+	if item.Type != "epic" {
+		t.Errorf("expected type 'epic', got %q", item.Type)
+	}
+	if item.Title != "Build auth system" {
+		t.Errorf("expected title 'Build auth system', got %q", item.Title)
+	}
+	if item.Status != "backlog" {
+		t.Errorf("expected default status 'backlog', got %q", item.Status)
+	}
+	if item.DisplayNum != 1 {
+		t.Errorf("expected display num 1, got %d", item.DisplayNum)
+	}
+}
+
+func TestCreateItem_WithParent(t *testing.T) {
+	eng := setupEngine(t)
+
+	epic, _ := eng.CreateItem("epic", "Epic", "", "", "medium", "", nil)
+	story, err := eng.CreateItem("story", "Story", epic.ID, "", "medium", "", nil)
+	if err != nil {
+		t.Fatalf("CreateItem with parent failed: %v", err)
+	}
+	if story.ParentID != epic.ID {
+		t.Errorf("expected parent %q, got %q", epic.ID, story.ParentID)
+	}
+}
+
+func TestCreateItem_InvalidParent(t *testing.T) {
+	eng := setupEngine(t)
+
+	_, err := eng.CreateItem("story", "Story", "nonexistent", "", "medium", "", nil)
+	if err == nil {
+		t.Error("expected error for invalid parent")
+	}
+}
+
+func TestCreateItem_InvalidType(t *testing.T) {
+	eng := setupEngine(t)
+
+	_, err := eng.CreateItem("bug", "Bug report", "", "", "medium", "", nil)
+	if err == nil {
+		t.Error("expected error for invalid type")
+	}
+}
+
+func TestCreateItem_EmptyTitle(t *testing.T) {
+	eng := setupEngine(t)
+
+	_, err := eng.CreateItem("task", "", "", "", "medium", "", nil)
+	if err == nil {
+		t.Error("expected error for empty title")
+	}
+}
+
+func TestCreateItem_InvalidPriority(t *testing.T) {
+	eng := setupEngine(t)
+
+	_, err := eng.CreateItem("task", "Task", "", "", "urgent", "", nil)
+	if err == nil {
+		t.Error("expected error for invalid priority")
+	}
+}
+
+func TestCreateItem_DefaultPriority(t *testing.T) {
+	eng := setupEngine(t)
+
+	item, err := eng.CreateItem("task", "Task", "", "", "", "", nil)
+	if err != nil {
+		t.Fatalf("CreateItem failed: %v", err)
+	}
+	if item.Priority != "medium" {
+		t.Errorf("expected default priority 'medium', got %q", item.Priority)
+	}
+}
+
+func TestMoveItem(t *testing.T) {
+	eng := setupEngine(t)
+
+	item, _ := eng.CreateItem("task", "Fix bug", "", "", "medium", "", nil)
+
+	err := eng.MoveItem(item.ID, "in-progress", "", "")
+	if err != nil {
+		t.Fatalf("MoveItem failed: %v", err)
+	}
+
+	updated, _ := eng.GetItem(item.ID)
+	if updated.Status != "in-progress" {
+		t.Errorf("expected status 'in-progress', got %q", updated.Status)
+	}
+}
+
+func TestMoveItem_InvalidStatus(t *testing.T) {
+	eng := setupEngine(t)
+
+	item, _ := eng.CreateItem("task", "Fix bug", "", "", "medium", "", nil)
+
+	err := eng.MoveItem(item.ID, "invalid-column", "", "")
+	if err == nil {
+		t.Error("expected error for invalid status")
+	}
+}
+
+func TestBlockItem(t *testing.T) {
+	eng := setupEngine(t)
+
+	task1, _ := eng.CreateItem("task", "Task 1", "", "", "medium", "", nil)
+	task2, _ := eng.CreateItem("task", "Task 2", "", "", "medium", "", nil)
+
+	err := eng.BlockItem(task2.ID, task1.ID, "", "")
+	if err != nil {
+		t.Fatalf("BlockItem failed: %v", err)
+	}
+
+	updated, _ := eng.GetItem(task2.ID)
+	if len(updated.BlockedBy) != 1 || updated.BlockedBy[0] != task1.ID {
+		t.Errorf("expected BlockedBy [%s], got %v", task1.ID, updated.BlockedBy)
+	}
+}
+
+func TestBlockItem_SelfBlock(t *testing.T) {
+	eng := setupEngine(t)
+
+	task, _ := eng.CreateItem("task", "Task", "", "", "medium", "", nil)
+
+	err := eng.BlockItem(task.ID, task.ID, "", "")
+	if err == nil {
+		t.Error("expected error for self-blocking")
+	}
+}
+
+func TestBlockItem_Duplicate(t *testing.T) {
+	eng := setupEngine(t)
+
+	task1, _ := eng.CreateItem("task", "Task 1", "", "", "medium", "", nil)
+	task2, _ := eng.CreateItem("task", "Task 2", "", "", "medium", "", nil)
+
+	_ = eng.BlockItem(task2.ID, task1.ID, "", "")
+	err := eng.BlockItem(task2.ID, task1.ID, "", "")
+	if err == nil {
+		t.Error("expected error for duplicate block")
+	}
+}
+
+func TestUnblockItem(t *testing.T) {
+	eng := setupEngine(t)
+
+	task1, _ := eng.CreateItem("task", "Task 1", "", "", "medium", "", nil)
+	task2, _ := eng.CreateItem("task", "Task 2", "", "", "medium", "", nil)
+
+	_ = eng.BlockItem(task2.ID, task1.ID, "", "")
+	err := eng.UnblockItem(task2.ID, task1.ID, "", "")
+	if err != nil {
+		t.Fatalf("UnblockItem failed: %v", err)
+	}
+
+	updated, _ := eng.GetItem(task2.ID)
+	if len(updated.BlockedBy) != 0 {
+		t.Errorf("expected empty BlockedBy, got %v", updated.BlockedBy)
+	}
+}
+
+func TestUnblockItem_NotBlocked(t *testing.T) {
+	eng := setupEngine(t)
+
+	task1, _ := eng.CreateItem("task", "Task 1", "", "", "medium", "", nil)
+	task2, _ := eng.CreateItem("task", "Task 2", "", "", "medium", "", nil)
+
+	err := eng.UnblockItem(task2.ID, task1.ID, "", "")
+	if err == nil {
+		t.Error("expected error when unblocking item that is not blocked")
+	}
+}
+
+func TestAssignItem(t *testing.T) {
+	eng := setupEngine(t)
+
+	task, _ := eng.CreateItem("task", "Task", "", "", "medium", "", nil)
+	_ = eng.AddUser("Dev", "human", "local")
+
+	board, _ := eng.ListBoard()
+	var userID string
+	for id := range board.Users {
+		userID = id
+	}
+
+	err := eng.AssignItem(task.ID, userID, "", "")
+	if err != nil {
+		t.Fatalf("AssignItem failed: %v", err)
+	}
+
+	updated, _ := eng.GetItem(task.ID)
+	if updated.Assignee != userID {
+		t.Errorf("expected assignee %q, got %q", userID, updated.Assignee)
+	}
+}
+
+func TestEditItem(t *testing.T) {
+	eng := setupEngine(t)
+
+	item, _ := eng.CreateItem("task", "Old Title", "", "", "medium", "", nil)
+
+	err := eng.EditItem(item.ID, "New Title", "New desc", "high", "", "")
+	if err != nil {
+		t.Fatalf("EditItem failed: %v", err)
+	}
+
+	updated, _ := eng.GetItem(item.ID)
+	if updated.Title != "New Title" {
+		t.Errorf("expected title 'New Title', got %q", updated.Title)
+	}
+	if updated.Description != "New desc" {
+		t.Errorf("expected description 'New desc', got %q", updated.Description)
+	}
+	if updated.Priority != "high" {
+		t.Errorf("expected priority 'high', got %q", updated.Priority)
+	}
+}
+
+func TestEditItem_NoChanges(t *testing.T) {
+	eng := setupEngine(t)
+
+	item, _ := eng.CreateItem("task", "Title", "", "", "medium", "", nil)
+
+	err := eng.EditItem(item.ID, "", "", "", "", "")
+	if err == nil {
+		t.Error("expected error when no changes specified")
+	}
+}
+
+func TestDeleteItem(t *testing.T) {
+	eng := setupEngine(t)
+
+	item, _ := eng.CreateItem("task", "Task", "", "", "medium", "", nil)
+
+	err := eng.DeleteItem(item.ID, "", "")
+	if err != nil {
+		t.Fatalf("DeleteItem failed: %v", err)
+	}
+
+	_, err = eng.GetItem(item.ID)
+	if err == nil {
+		t.Error("expected error getting deleted item")
+	}
+}
+
+func TestDeleteItem_WithChildren(t *testing.T) {
+	eng := setupEngine(t)
+
+	epic, _ := eng.CreateItem("epic", "Epic", "", "", "medium", "", nil)
+	_, _ = eng.CreateItem("story", "Story", epic.ID, "", "medium", "", nil)
+
+	err := eng.DeleteItem(epic.ID, "", "")
+	if err == nil {
+		t.Error("expected error when deleting item with children")
+	}
+}
+
+func TestAddUser(t *testing.T) {
+	eng := setupEngine(t)
+
+	err := eng.AddUser("Claude Agent", "agent", "claude-code")
+	if err != nil {
+		t.Fatalf("AddUser failed: %v", err)
+	}
+
+	board, _ := eng.ListBoard()
+	if len(board.Users) != 1 {
+		t.Errorf("expected 1 user, got %d", len(board.Users))
+	}
+
+	for _, u := range board.Users {
+		if u.Name != "Claude Agent" {
+			t.Errorf("expected name 'Claude Agent', got %q", u.Name)
+		}
+		if u.Provider != "claude-code" {
+			t.Errorf("expected provider 'claude-code', got %q", u.Provider)
+		}
+	}
+}
+
+func TestAddUser_InvalidType(t *testing.T) {
+	eng := setupEngine(t)
+
+	err := eng.AddUser("Bot", "robot", "local")
+	if err == nil {
+		t.Error("expected error for invalid identity type")
+	}
+}
+
+func TestRemoveUser(t *testing.T) {
+	eng := setupEngine(t)
+
+	_ = eng.AddUser("Dev", "human", "local")
+
+	board, _ := eng.ListBoard()
+	var userID string
+	for id := range board.Users {
+		userID = id
+	}
+
+	err := eng.RemoveUser(userID)
+	if err != nil {
+		t.Fatalf("RemoveUser failed: %v", err)
+	}
+
+	board, _ = eng.ListBoard()
+	if len(board.Users) != 0 {
+		t.Errorf("expected 0 users, got %d", len(board.Users))
+	}
+}
+
+func TestListItems_WithFilter(t *testing.T) {
+	eng := setupEngine(t)
+
+	_, _ = eng.CreateItem("task", "Task 1", "", "", "medium", "", []string{"frontend"})
+	item2, _ := eng.CreateItem("task", "Task 2", "", "", "high", "", []string{"backend"})
+	_ = eng.MoveItem(item2.ID, "in-progress", "", "")
+
+	items, err := eng.ListItems(engine.ListFilter{Status: "in-progress"})
+	if err != nil {
+		t.Fatalf("ListItems failed: %v", err)
+	}
+	if len(items) != 1 {
+		t.Errorf("expected 1 item, got %d", len(items))
+	}
+
+	items, err = eng.ListItems(engine.ListFilter{Tag: "frontend"})
+	if err != nil {
+		t.Fatalf("ListItems failed: %v", err)
+	}
+	if len(items) != 1 {
+		t.Errorf("expected 1 item with tag 'frontend', got %d", len(items))
+	}
+}
+
+func TestGetChildren(t *testing.T) {
+	eng := setupEngine(t)
+
+	epic, _ := eng.CreateItem("epic", "Epic", "", "", "medium", "", nil)
+	_, _ = eng.CreateItem("story", "Story 1", epic.ID, "", "medium", "", nil)
+	_, _ = eng.CreateItem("story", "Story 2", epic.ID, "", "medium", "", nil)
+
+	children, err := eng.GetChildren(epic.ID)
+	if err != nil {
+		t.Fatalf("GetChildren failed: %v", err)
+	}
+	if len(children) != 2 {
+		t.Errorf("expected 2 children, got %d", len(children))
+	}
+}
