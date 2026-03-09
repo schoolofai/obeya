@@ -1,0 +1,12 @@
+{
+  "name": "obeya",
+  "description": "Claude Code integration for the Obeya Kanban board CLI",
+  "version": "1.0.0",
+  "author": {
+    "name": "Niladri Bose"
+  },
+  "homepage": "https://github.com/schoolofai/obeya",
+  "repository": "https://github.com/schoolofai/obeya",
+  "license": "MIT",
+  "keywords": ["kanban", "tasks", "cli", "productivity", "agents"]
+}
