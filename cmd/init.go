@@ -3,21 +3,29 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
+	"github.com/niladribose/obeya/internal/store"
 	"github.com/spf13/cobra"
 )
 
 var initColumns string
 var initClaudeMD bool
+var initRoot string
 
 var initCmd = &cobra.Command{
 	Use:   "init [name]",
-	Short: "Initialize a new Obeya board in the current directory",
+	Short: "Initialize a new Obeya board",
+	Long:  "Initialize a new Obeya board. Defaults to the git repository root. Use --root to specify a custom location.",
 	Args:  cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		s := getStore()
+		root, err := resolveInitRoot()
+		if err != nil {
+			return err
+		}
 
+		s := store.NewJSONStore(root)
 		columns := parseColumns(initColumns)
 
 		boardName := "obeya"
@@ -29,10 +37,16 @@ var initCmd = &cobra.Command{
 			return err
 		}
 
-		printInitConfirmation(boardName, columns)
+		fmt.Printf("Board %q initialized in %s/.obeya/\n", boardName, root)
+		if len(columns) > 0 {
+			fmt.Printf("Columns: %s\n", strings.Join(columns, ", "))
+		} else {
+			fmt.Println("Columns: backlog, todo, in-progress, review, done")
+		}
 
 		if initClaudeMD {
-			if err := appendClaudeMD(); err != nil {
+			claudePath := filepath.Join(root, "CLAUDE.md")
+			if err := appendClaudeMDAt(claudePath); err != nil {
 				return fmt.Errorf("could not update CLAUDE.md: %w", err)
 			}
 			fmt.Println("Updated CLAUDE.md with Obeya board instructions")
@@ -45,6 +59,7 @@ var initCmd = &cobra.Command{
 func init() {
 	initCmd.Flags().StringVar(&initColumns, "columns", "", "comma-separated column names (default: backlog,todo,in-progress,review,done)")
 	initCmd.Flags().BoolVar(&initClaudeMD, "claude-md", true, "append Obeya instructions to project CLAUDE.md")
+	initCmd.Flags().StringVar(&initRoot, "root", "", "directory to create .obeya in (default: git repository root)")
 	rootCmd.AddCommand(initCmd)
 }
 
@@ -59,18 +74,43 @@ func parseColumns(raw string) []string {
 	return parts
 }
 
-func printInitConfirmation(name string, columns []string) {
-	fmt.Printf("Board %q initialized in .obeya/\n", name)
-	if len(columns) > 0 {
-		fmt.Printf("Columns: %s\n", strings.Join(columns, ", "))
-	} else {
-		fmt.Println("Columns: backlog, todo, in-progress, review, done")
+func resolveInitRoot() (string, error) {
+	if initRoot != "" {
+		abs, err := filepath.Abs(initRoot)
+		if err != nil {
+			return "", fmt.Errorf("failed to resolve --root path: %w", err)
+		}
+		info, err := os.Stat(abs)
+		if err != nil {
+			return "", fmt.Errorf("--root path does not exist: %w", err)
+		}
+		if !info.IsDir() {
+			return "", fmt.Errorf("--root path is not a directory: %s", abs)
+		}
+		return abs, nil
 	}
+
+	// Default: find git root by walking up
+	cwd, err := os.Getwd()
+	if err != nil {
+		return "", fmt.Errorf("failed to get working directory: %w", err)
+	}
+	dir := cwd
+	for {
+		gitDir := filepath.Join(dir, ".git")
+		if _, err := os.Stat(gitDir); err == nil {
+			return dir, nil
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			break
+		}
+		dir = parent
+	}
+	return "", fmt.Errorf("no git repository found — use 'ob init --root <path>' to specify a board location")
 }
 
-func appendClaudeMD() error {
-	claudeMDPath := "CLAUDE.md"
-
+func appendClaudeMDAt(claudePath string) error {
 	content := `
 ## Task Tracking — Obeya
 
@@ -82,7 +122,7 @@ This project uses Obeya (` + "`ob`" + `) for task tracking. Before starting work
 Use ` + "`ob list --format json`" + ` for full board state.
 `
 
-	existing, err := os.ReadFile(claudeMDPath)
+	existing, err := os.ReadFile(claudePath)
 	if err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("failed to read CLAUDE.md: %w", err)
 	}
@@ -91,7 +131,7 @@ Use ` + "`ob list --format json`" + ` for full board state.
 		return nil
 	}
 
-	f, err := os.OpenFile(claudeMDPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	f, err := os.OpenFile(claudePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return fmt.Errorf("failed to open CLAUDE.md: %w", err)
 	}
