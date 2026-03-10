@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/niladribose/obeya/internal/agent"
 	"github.com/spf13/cobra"
 )
 
@@ -21,8 +22,17 @@ var pluginSyncCmd = &cobra.Command{
 	RunE:  runPluginSync,
 }
 
+var pluginClaudeInstallCmd = &cobra.Command{
+	Use:   "claude-install",
+	Short: "Install the obeya plugin into Claude Code via the claude CLI",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return agent.InstallPlugin()
+	},
+}
+
 func init() {
 	pluginCmd.AddCommand(pluginSyncCmd)
+	pluginCmd.AddCommand(pluginClaudeInstallCmd)
 	rootCmd.AddCommand(pluginCmd)
 }
 
