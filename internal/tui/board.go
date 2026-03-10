@@ -87,7 +87,8 @@ func (a App) renderColumn(colIdx int, colName string) string {
 	if len(cardViews) == 0 {
 		// Empty column — pad to viewport height
 		if viewH > 0 {
-			cardContent = strings.Repeat("\n", viewH)
+			emptyLines := make([]string, viewH)
+			cardContent = strings.Join(emptyLines, "\n")
 		}
 	} else {
 		allCards := strings.Join(cardViews, "\n")

@@ -134,7 +134,7 @@ func resolveInitRoot() (string, error) {
 
 const obeyaSectionStart = "<!-- obeya:start -->"
 const obeyaSectionEnd = "<!-- obeya:end -->"
-const obeyaSectionVersion = "v3"
+const obeyaSectionVersion = "v4"
 
 func obeyaClaudeMDContent() string {
 	return obeyaSectionStart + " " + obeyaSectionVersion + `
@@ -157,6 +157,9 @@ When breaking down a plan into tasks, create a full hierarchy with detailed desc
 - **Tasks**: Atomic work items. Description includes what to do, how to verify it's done, and dependencies on other tasks.
 
 Task descriptions must be self-contained — an agent picking one up should have everything needed to start work. Include key context inline and reference files for larger context (e.g., "See docs/plans/auth-design.md section 3 for protocol details" or "See src/auth/oauth.go for existing implementation").
+
+### Dual tracking: session tools + Obeya board
+Agents may use ` + "`TaskCreate`" + `/` + "`TodoWrite`" + ` for internal session-level progress tracking. However, all epic/story/task breakdowns MUST also be created on the Obeya board using ` + "`ob`" + ` commands. The Obeya board is the persistent source of truth; session tools are ephemeral aids. When both are used, keep them in sync — when a session task completes, move the corresponding ` + "`ob`" + ` task to done as well.
 
 ### Task lifecycle
 - Starting work: ` + "`ob move <id> in-progress`" + `
