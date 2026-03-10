@@ -39,6 +39,10 @@ var createCmd = &cobra.Command{
 			createDesc = string(data)
 		}
 
+		if strings.TrimSpace(createDesc) == "" {
+			return fmt.Errorf("--description (-d) or --body-file is required. Provide enough context so any agent can complete this task")
+		}
+
 		tags := parseTags(createTags)
 
 		eng, err := getEngine()
