@@ -125,10 +125,11 @@ func printItemChildren(eng *engine.Engine, item *domain.Item, verbose bool) {
 }
 
 func truncateDesc(s string, max int) string {
-	if len(s) <= max {
+	runes := []rune(s)
+	if len(runes) <= max {
 		return s
 	}
-	return s[:max] + "..."
+	return string(runes[:max]) + "..."
 }
 
 func printChildrenVerbose(children []*domain.Item) {
