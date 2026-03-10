@@ -30,6 +30,7 @@ type App struct {
 	detail     DetailModel
 	picker     PickerModel
 	input      InputModel
+	dashboard  DashboardModel
 	confirmMsg string
 
 	// Dimensions
@@ -95,6 +96,9 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.board = msg.board
 		a.columns = extractColumns(msg.board)
 		a.clampCursor()
+		if a.state == stateDashboard {
+			a.dashboard = newDashboardModel(a.board, a.width, a.height)
+		}
 		return a, nil
 	case errMsg:
 		a.err = msg.err
@@ -132,6 +136,9 @@ func (a App) View() string {
 		return a.renderBoardWithOverlay(a.input.View())
 	case stateConfirm:
 		return a.renderBoardWithOverlay(a.renderConfirm())
+	case stateDashboard:
+		a.dashboard.SetSize(a.width, a.height)
+		return a.dashboard.View()
 	default:
 		return a.renderBoard()
 	}
@@ -150,6 +157,8 @@ func (a App) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return a.handleInputKey(msg)
 	case stateConfirm:
 		return a.handleConfirmKey(msg)
+	case stateDashboard:
+		return a.handleDashboardKey(msg)
 	}
 	return a, nil
 }
@@ -378,6 +387,10 @@ func (a App) handleBoardKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		a.input = newInputModel("Search:")
 		a.state = stateInput
 		a.prevState = stateBoard
+	case "D":
+		a.dashboard = newDashboardModel(a.board, a.width, a.height)
+		a.prevState = stateBoard
+		a.state = stateDashboard
 	case "r":
 		a.err = nil
 		return a, a.loadBoard()
@@ -468,6 +481,11 @@ func (a App) executePickerSelection() (tea.Model, tea.Cmd) {
 			blockerNum := extractItemNum(selected)
 			_ = a.engine.BlockItem(item.ID, blockerNum, "", "")
 		}
+	case pickerEpic:
+		epicNum := extractItemNum(selected)
+		a.dashboard.SelectEpic(a.board, epicNum)
+		a.state = stateDashboard
+		return a, nil
 	}
 
 	a.state = stateBoard
@@ -528,6 +546,37 @@ func (a App) handleConfirmKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		a.state = stateBoard
 	}
 	return a, nil
+}
+
+func (a App) handleDashboardKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "D", "esc":
+		a.state = stateBoard
+	case "q", "ctrl+c":
+		return a.quit()
+	case "tab":
+		a.dashboard.NextPanel()
+	case "E":
+		epics := epicPickerLabels(a.board)
+		if len(epics) > 0 {
+			a.picker = newPickerModel("Select epic for burndown:", pickerEpic, epics)
+			a.state = statePicker
+			a.prevState = stateDashboard
+		}
+	case "R", "r":
+		a.dashboard = newDashboardModel(a.board, a.width, a.height)
+	}
+	return a, nil
+}
+
+func epicPickerLabels(board *domain.Board) []string {
+	var labels []string
+	for _, item := range board.Items {
+		if item.Type == domain.ItemTypeEpic {
+			labels = append(labels, fmt.Sprintf("#%d %s", item.DisplayNum, item.Title))
+		}
+	}
+	return labels
 }
 
 func (a App) renderConfirm() string {

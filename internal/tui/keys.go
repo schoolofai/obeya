@@ -8,6 +8,7 @@ const (
 	statePicker
 	stateInput
 	stateConfirm
+	stateDashboard
 )
 
 type pickerKind int
@@ -17,6 +18,7 @@ const (
 	pickerUser
 	pickerItem
 	pickerType
+	pickerEpic
 )
 
 type detailTab int
