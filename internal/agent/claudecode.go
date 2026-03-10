@@ -32,6 +32,7 @@ func (c *ClaudeCodeSetup) Setup(ctx AgentContext) error {
 	if err := AppendClaudeMDAt(claudePath); err != nil {
 		return fmt.Errorf("could not update CLAUDE.md: %w", err)
 	}
+	fmt.Println("Updated CLAUDE.md with Obeya board instructions")
 
 	if !ctx.SkipPlugin {
 		if err := installClaudePlugin(); err != nil {
