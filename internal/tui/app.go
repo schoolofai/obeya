@@ -122,22 +122,19 @@ func (a App) View() string {
 		return "Loading board..."
 	}
 
-	var out string
 	switch a.state {
 	case stateDetail:
 		a.detail.SetSize(a.width, a.height)
 		return a.detail.View()
 	case statePicker:
-		out = a.renderBoardWithOverlay(a.picker.View())
+		return a.renderBoardWithOverlay(a.picker.View())
 	case stateInput:
-		out = a.renderBoardWithOverlay(a.input.View())
+		return a.renderBoardWithOverlay(a.input.View())
 	case stateConfirm:
-		out = a.renderBoardWithOverlay(a.renderConfirm())
+		return a.renderBoardWithOverlay(a.renderConfirm())
 	default:
-		out = a.renderBoard()
+		return a.clampHeight(a.renderBoard())
 	}
-
-	return a.clampHeight(out)
 }
 
 // clampHeight truncates rendered output to the terminal height so that
@@ -254,8 +251,8 @@ func (a *App) scrollToSelected() {
 
 // contentViewHeight returns the available height for card content inside a column.
 func (a App) contentViewHeight() int {
-	// a.height minus: board header(1) + newline(1) + column border(2) + column header(1) + newline(1) + help bar(1)
-	h := a.height - 7
+	// a.height minus: board header(1) + help bar(1) + column border(2) + column header(1)
+	h := a.height - 5
 	if h < 1 {
 		return 0
 	}
