@@ -3,6 +3,7 @@ package metrics
 import (
 	"fmt"
 	"regexp"
+	"sort"
 	"time"
 
 	"github.com/niladribose/obeya/internal/domain"
@@ -20,6 +21,13 @@ type ColumnWIP struct {
 	Count int
 	Limit int
 	Level string // "ok", "warn", "over"
+}
+
+// BurndownPoint represents a single point on a burndown chart.
+type BurndownPoint struct {
+	Date      time.Time
+	Remaining int
+	Ideal     float64
 }
 
 // MoveDetailRe matches history entries like "status: backlog -> in-progress".
@@ -289,6 +297,65 @@ func RollingAverage(days []DayCount, window int) []float64 {
 		result[i] = float64(sum) / float64(i-start+1)
 	}
 	return result
+}
+
+// EpicBurndown computes burndown points for an epic and its children.
+func EpicBurndown(epic *domain.Item, children []*domain.Item, now time.Time) []BurndownPoint {
+	total := len(children)
+	if total == 0 {
+		return nil
+	}
+
+	doneTimes := collectDoneTimes(children)
+	sort.Slice(doneTimes, func(i, j int) bool { return doneTimes[i].Before(doneTimes[j]) })
+
+	return buildBurndownPoints(epic, total, doneTimes, now)
+}
+
+func collectDoneTimes(children []*domain.Item) []time.Time {
+	var doneTimes []time.Time
+	for _, child := range children {
+		for _, entry := range child.History {
+			if entry.Action != "moved" {
+				continue
+			}
+			m := MoveDetailRe.FindStringSubmatch(entry.Detail)
+			if m != nil && m[2] == "done" {
+				doneTimes = append(doneTimes, entry.Timestamp)
+			}
+		}
+	}
+	return doneTimes
+}
+
+func buildBurndownPoints(epic *domain.Item, total int, doneTimes []time.Time, now time.Time) []BurndownPoint {
+	totalDuration := now.Sub(epic.CreatedAt)
+
+	points := make([]BurndownPoint, 0, len(doneTimes)+2)
+	points = append(points, BurndownPoint{
+		Date:      epic.CreatedAt,
+		Remaining: total,
+		Ideal:     float64(total),
+	})
+
+	remaining := total
+	for _, dt := range doneTimes {
+		remaining--
+		elapsed := dt.Sub(epic.CreatedAt)
+		idealRemaining := float64(total) * (1 - elapsed.Seconds()/totalDuration.Seconds())
+		points = append(points, BurndownPoint{
+			Date:      dt,
+			Remaining: remaining,
+			Ideal:     idealRemaining,
+		})
+	}
+
+	points = append(points, BurndownPoint{
+		Date:      now,
+		Remaining: remaining,
+		Ideal:     0,
+	})
+	return points
 }
 
 // WIPStatus computes WIP status for each non-done column on the board.

@@ -216,6 +216,50 @@ func TestRollingAverage(t *testing.T) {
 	}
 }
 
+func TestEpicBurndown_BasicCase(t *testing.T) {
+	now := time.Date(2026, 3, 10, 12, 0, 0, 0, time.UTC)
+	epic := &domain.Item{
+		ID:        "epic1",
+		Type:      domain.ItemTypeEpic,
+		CreatedAt: now.Add(-72 * time.Hour),
+	}
+	children := []*domain.Item{
+		{ID: "c1", Status: "done", History: []domain.ChangeRecord{
+			{Action: "moved", Detail: "status: in-progress -> done", Timestamp: now.Add(-48 * time.Hour)},
+		}},
+		{ID: "c2", Status: "done", History: []domain.ChangeRecord{
+			{Action: "moved", Detail: "status: in-progress -> done", Timestamp: now.Add(-24 * time.Hour)},
+		}},
+		{ID: "c3", Status: "in-progress", History: []domain.ChangeRecord{}},
+	}
+	points := EpicBurndown(epic, children, now)
+	if points == nil {
+		t.Fatal("expected non-nil points")
+	}
+	if points[0].Remaining != 3 {
+		t.Errorf("first point remaining = %d, want 3", points[0].Remaining)
+	}
+	if points[2].Remaining != 1 {
+		t.Errorf("after 2 done events remaining = %d, want 1", points[2].Remaining)
+	}
+	last := points[len(points)-1]
+	if last.Remaining != 1 {
+		t.Errorf("last point remaining = %d, want 1", last.Remaining)
+	}
+	if last.Ideal != 0 {
+		t.Errorf("last point ideal = %f, want 0", last.Ideal)
+	}
+}
+
+func TestEpicBurndown_NoChildren(t *testing.T) {
+	now := time.Date(2026, 3, 10, 12, 0, 0, 0, time.UTC)
+	epic := &domain.Item{ID: "epic1", CreatedAt: now.Add(-72 * time.Hour)}
+	points := EpicBurndown(epic, nil, now)
+	if points != nil {
+		t.Errorf("expected nil, got %v", points)
+	}
+}
+
 func TestWIPStatus_WithLimits(t *testing.T) {
 	board := &domain.Board{
 		Columns: []domain.Column{
