@@ -134,7 +134,7 @@ func resolveInitRoot() (string, error) {
 
 const obeyaSectionStart = "<!-- obeya:start -->"
 const obeyaSectionEnd = "<!-- obeya:end -->"
-const obeyaSectionVersion = "v4"
+const obeyaSectionVersion = "v5"
 
 func obeyaClaudeMDContent() string {
 	return obeyaSectionStart + " " + obeyaSectionVersion + `
@@ -158,8 +158,19 @@ When breaking down a plan into tasks, create a full hierarchy with detailed desc
 
 Task descriptions must be self-contained — an agent picking one up should have everything needed to start work. Include key context inline and reference files for larger context (e.g., "See docs/plans/auth-design.md section 3 for protocol details" or "See src/auth/oauth.go for existing implementation").
 
-### Dual tracking: session tools + Obeya board
-Agents may use ` + "`TaskCreate`" + `/` + "`TodoWrite`" + ` for internal session-level progress tracking. However, all epic/story/task breakdowns MUST also be created on the Obeya board using ` + "`ob`" + ` commands. The Obeya board is the persistent source of truth; session tools are ephemeral aids. When both are used, keep them in sync — when a session task completes, move the corresponding ` + "`ob`" + ` task to done as well.
+### Obeya board is authoritative over session tools
+` + "`TodoWrite`" + ` and ` + "`TaskCreate`" + ` are ephemeral session aids. The Obeya board persists across sessions and is the source of truth. When any skill or workflow uses session tools (e.g., TodoWrite), the corresponding work MUST also exist on the Obeya board. Specifically:
+- Before creating a TodoWrite checklist, ensure equivalent tasks exist on the board via ` + "`ob create`" + `
+- When marking a TodoWrite item complete, also run ` + "`ob move <id> done`" + `
+- When a skill workflow says "mark task complete in TodoWrite", ALSO run ` + "`ob move <id> done`" + `
+
+### Integration with other skills and workflows
+When using skills that dispatch subagents or manage work (e.g., superpowers, subagent-driven-development, executing-plans):
+- The **controller/orchestrator** (not the subagent) is responsible for obeya board updates
+- Before dispatching work: ensure the task exists on the board and is in-progress
+- After subagent completes: run ` + "`ob move <id> done`" + ` on the corresponding board task
+- When a plan is broken into subtasks by any skill: create those subtasks on the board too
+- This applies regardless of which skill is orchestrating the work
 
 ### Task lifecycle
 - Starting work: ` + "`ob move <id> in-progress`" + `

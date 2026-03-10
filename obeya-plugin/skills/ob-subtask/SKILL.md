@@ -1,5 +1,5 @@
 ---
-description: Create a subtask under a parent item. Use when breaking down work during implementation.
+description: Create a subtask under a parent item. Use when breaking down work during implementation, when a plan is decomposed into tasks, or when any workflow creates sub-items that need board tracking. Preferred over ob-create when the work has a clear parent epic or story.
 disable-model-invocation: false
 user-invocable: true
 ---
@@ -52,6 +52,15 @@ Create a child item under a parent on the Obeya board.
 
 5. Run `ob create <type> "<title>" -p <parent-id> [flags]`
 6. Display the created item with its ID, display number, and parent relationship
+
+## Description Quality (REQUIRED)
+
+The description must be self-contained — an agent picking this task up cold should have everything needed to start work:
+
+- **Stories**: what to build, why, acceptance criteria
+- **Tasks**: what to do, how to verify, dependencies, key file paths (e.g., "Modify src/cmd/show.go, see internal/domain/types.go for data model")
+
+If no `--description` flag was provided, generate one from conversation context. A task without a meaningful description is incomplete — do not create empty or vague tasks.
 
 ## Plan Linking (REQUIRED — do this after every create)
 

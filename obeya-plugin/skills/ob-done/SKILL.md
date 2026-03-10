@@ -1,5 +1,5 @@
 ---
-description: Mark the current in-progress task as done. Use when work is completed on a task.
+description: Mark the current in-progress task as done. Use when work is completed on a task, after tests pass, after a subagent reports DONE, or whenever a workflow step completes. If any skill or workflow marks work complete via TodoWrite or TaskCreate, this skill MUST also be invoked to keep the Obeya board in sync.
 disable-model-invocation: false
 user-invocable: true
 ---

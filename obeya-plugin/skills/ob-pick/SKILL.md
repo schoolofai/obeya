@@ -1,5 +1,5 @@
 ---
-description: Pick an unassigned task from the board and start working on it. Use proactively when starting work or when asked to pick up a task.
+description: Pick an unassigned task from the board and start working on it. Use proactively when starting work, when asked to pick up a task, or when the current task is done and more work remains. This skill should be used whenever an agent needs to begin new work — including after plan creation, after completing a previous task, or when the user says to start implementing.
 disable-model-invocation: false
 user-invocable: true
 ---

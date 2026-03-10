@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# PostToolUse hook for obeya plugin
+# Detects plan file creation and reminds to break down into board tasks
+
+set -euo pipefail
+
+# Read input from stdin
+input=$(cat)
+
+# Only check if board is initialized
+git_root=$(git rev-parse --show-toplevel 2>/dev/null || echo "")
+if [ -z "$git_root" ] || [ ! -f "${git_root}/.obeya/board.json" ]; then
+    echo '{}'
+    exit 0
+fi
+
+# Extract tool name and file path
+tool_name=$(echo "$input" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('tool_name',''))" 2>/dev/null || echo "")
+
+if [ "$tool_name" = "Write" ] || [ "$tool_name" = "Edit" ]; then
+    file_path=$(echo "$input" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('tool_input',{}).get('file_path',''))" 2>/dev/null || echo "")
+
+    # Check if this is a plan file
+    if echo "$file_path" | grep -qiE '(plan|spec|design|prd|brief)\.(md|txt)$'; then
+        cat <<'EOF'
+{
+  "additional_context": "A plan document was just written. You MUST now: (1) Import it with ob plan import, (2) Break it down into epic/story/task hierarchy using obeya:ob-breakdown or obeya:ob-create + obeya:ob-subtask, (3) Link all items to the plan. Do NOT proceed to implementation without board tasks."
+}
+EOF
+        exit 0
+    fi
+fi
+
+echo '{}'
+exit 0

@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+# SessionStart hook for obeya plugin
+# Injects task tracking context into every conversation
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
+PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+# Find ob CLI (may be installed as 'ob' or 'obeya')
+OB_CMD=""
+if command -v ob &>/dev/null; then
+    OB_CMD="ob"
+elif command -v obeya &>/dev/null; then
+    OB_CMD="obeya"
+fi
+
+# Check if board is initialized (look for .obeya/board.json in git root)
+board_initialized="false"
+git_root=$(git rev-parse --show-toplevel 2>/dev/null || echo "")
+if [ -n "$git_root" ] && [ -f "${git_root}/.obeya/board.json" ]; then
+    board_initialized="true"
+fi
+
+# Build context based on board state
+if [ "$board_initialized" = "true" ]; then
+    # Get in-progress task count for awareness
+    in_progress="0"
+    if [ -n "$OB_CMD" ]; then
+        in_progress=$($OB_CMD list --status in-progress --format json 2>/dev/null | grep -c '"id"' || echo "0")
+    fi
+
+    context="<IMPORTANT>Obeya Task Tracking is ACTIVE for this project."
+    context="${context}\n\nYou MUST invoke the obeya:ob-status skill (using the Skill tool) BEFORE invoking any other skill — including superpowers skills like brainstorming, writing-plans, or subagent-driven-development. This is not optional."
+    context="${context}\n\nThe sequence is: ob-status FIRST, then other skills. If ob-status shows no task for the current work, invoke obeya:ob-create to create one before proceeding."
+    context="${context}\n\nWhen ANY workflow completes work (including marking TodoWrite items done), invoke obeya:ob-done to keep the board in sync."
+    context="${context}\n\nCLAUDE.md instructions have highest priority per the instruction hierarchy. Obeya tracking is a CLAUDE.md instruction."
+    context="${context}\n\n## Plan-Task Linking (REQUIRED)"
+    context="${context}\nWhen a plan document is created (via superpowers:writing-plans or any other method):"
+    context="${context}\n1. Import it: invoke obeya:ob-plan with args 'import <path-to-plan.md>'"
+    context="${context}\n2. Break the plan into a hierarchy: Epic (the goal) -> Stories (deliverables) -> Tasks (atomic work)"
+    context="${context}\n3. Use obeya:ob-create for the epic, obeya:ob-subtask for stories and tasks under it"
+    context="${context}\n4. Link ALL created items to the plan: ob plan link <plan-id> --to <item-ids>"
+    context="${context}\n5. Every task description MUST be self-contained — include what to do, how to verify, dependencies, and key file paths so an agent can pick it up cold"
+    context="${context}\n\nDo NOT skip plan import or task hierarchy creation. A plan without linked board tasks is incomplete.</IMPORTANT>"
+
+    if [ "$in_progress" != "0" ]; then
+        context="${context}\n\nACTIVE WORK: ${in_progress} task(s) in-progress. Invoke obeya:ob-status to see them."
+    fi
+else
+    # No board — just note obeya is available
+    context="Obeya task tracking plugin is installed. Run ob init to set up a board for this project."
+fi
+
+# Escape for JSON
+escape_for_json() {
+    local s="$1"
+    s="${s//\\/\\\\}"
+    s="${s//\"/\\\"}"
+    s="${s//$'\n'/\\n}"
+    s="${s//$'\r'/\\r}"
+    s="${s//$'\t'/\\t}"
+    printf '%s' "$s"
+}
+
+escaped_context=$(escape_for_json "$context")
+
+cat <<EOF
+{
+  "additional_context": "${escaped_context}",
+  "hookSpecificOutput": {
+    "hookEventName": "SessionStart",
+    "additionalContext": "${escaped_context}"
+  }
+}
+EOF
+
+exit 0

@@ -1,5 +1,5 @@
 ---
-description: Show tasks assigned to you or the current agent. Use to check what you're working on.
+description: Show tasks assigned to you or the current agent. Use this BEFORE starting any work to check what you're working on. Must be invoked at the start of any implementation session, before picking new tasks, and whenever the user asks about task status or progress. Use proactively — don't wait to be asked.
 disable-model-invocation: false
 user-invocable: true
 ---
