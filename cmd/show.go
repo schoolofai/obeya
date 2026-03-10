@@ -22,6 +22,7 @@ var showCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(showCmd)
 	showCmd.Flags().String("format", "", "output format (json)")
+	showCmd.Flags().BoolP("verbose", "v", false, "show detailed children info (priority, assignee, description)")
 }
 
 func runShow(cmd *cobra.Command, args []string) error {
@@ -40,8 +41,10 @@ func runShow(cmd *cobra.Command, args []string) error {
 		return printShowJSON(item, eng)
 	}
 
+	verbose, _ := cmd.Flags().GetBool("verbose")
+
 	printItemDetail(item)
-	printItemChildren(eng, item)
+	printItemChildren(eng, item, verbose)
 	printItemHistory(item)
 	return nil
 }
@@ -97,7 +100,7 @@ func printTags(tags []string) {
 	}
 }
 
-func printItemChildren(eng *engine.Engine, item *domain.Item) {
+func printItemChildren(eng *engine.Engine, item *domain.Item, verbose bool) {
 	children, err := eng.GetChildren(item.ID)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "warning: failed to get children: %v\n", err)
@@ -109,9 +112,48 @@ func printItemChildren(eng *engine.Engine, item *domain.Item) {
 
 	fmt.Fprintln(os.Stdout, "\nChildren:")
 	sortItemsByDisplayNum(children)
+
+	if verbose {
+		printChildrenVerbose(children)
+		return
+	}
+
 	for _, child := range children {
 		fmt.Fprintf(os.Stdout, "  #%-4d [%s] %s — %s\n",
 			child.DisplayNum, child.Type, child.Status, child.Title)
+	}
+}
+
+func truncateDesc(s string, max int) string {
+	if len(s) <= max {
+		return s
+	}
+	return s[:max] + "..."
+}
+
+func printChildrenVerbose(children []*domain.Item) {
+	for _, child := range children {
+		fmt.Fprintf(os.Stdout, "  #%-4d [%s] %s — %s\n",
+			child.DisplayNum, child.Type, child.Status, child.Title)
+
+		assignee := "\u2014"
+		if child.Assignee != "" {
+			assignee = child.Assignee
+		}
+		line := fmt.Sprintf("      Priority: %s | Assignee: %s",
+			child.Priority, assignee)
+		if len(child.BlockedBy) > 0 {
+			line += fmt.Sprintf(" | Blocked by: %s",
+				strings.Join(child.BlockedBy, ", "))
+		}
+		fmt.Fprintln(os.Stdout, line)
+
+		if child.Description != "" {
+			fmt.Fprintf(os.Stdout, "      Desc: %s\n",
+				truncateDesc(child.Description, 80))
+		}
+
+		fmt.Fprintln(os.Stdout)
 	}
 }
 
