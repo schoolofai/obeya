@@ -1,0 +1,20 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "obeya-local",
+  "description": "Obeya Kanban board plugin for Claude Code",
+  "owner": {
+    "name": "Niladri Bose"
+  },
+  "plugins": [
+    {
+      "name": "obeya",
+      "description": "Claude Code integration for the Obeya Kanban board CLI",
+      "version": "1.0.0",
+      "source": "./",
+      "author": {
+        "name": "Niladri Bose"
+      },
+      "category": "productivity"
+    }
+  ]
+}

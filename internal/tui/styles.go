@@ -62,6 +62,14 @@ var (
 	epicGroupStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("5")).
 			Bold(true)
+
+	selectedEpicGroupStyle = lipgloss.NewStyle().
+				Foreground(lipgloss.Color("14")).
+				Bold(true).
+				Underline(true)
+
+	// Cross-column badge appended to epic headers when epic lives elsewhere.
+	crossColBadge = lipgloss.NewStyle().Faint(true).Render(" ⇠")
 )
 
 func priorityIndicator(pri string) string {

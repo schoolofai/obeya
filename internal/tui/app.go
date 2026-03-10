@@ -15,10 +15,11 @@ type App struct {
 	board  *domain.Board
 
 	// Board navigation
-	columns   []string
-	cursorCol int
-	cursorRow int
-	collapsed map[string]bool
+	columns    []string
+	cursorCol  int
+	cursorRow  int
+	collapsed  map[string]bool
+	colScrollY map[int]int // per-column scroll offsets
 
 	// State machine
 	state     viewState
@@ -40,9 +41,10 @@ type App struct {
 // NewApp creates a new enhanced TUI app backed by the given engine.
 func NewApp(eng *engine.Engine) App {
 	return App{
-		engine:    eng,
-		collapsed: make(map[string]bool),
-		state:     stateBoard,
+		engine:     eng,
+		collapsed:  make(map[string]bool),
+		colScrollY: make(map[int]int),
+		state:      stateBoard,
 	}
 }
 
@@ -130,6 +132,78 @@ func (a App) selectedItem() *domain.Item {
 	return items[a.cursorRow]
 }
 
+func (a *App) scrollToSelected() {
+	if a.height <= 0 || a.board == nil {
+		return
+	}
+	item := a.selectedItem()
+	if item == nil {
+		a.colScrollY[a.cursorCol] = 0
+		return
+	}
+
+	// Render card content for the current column only
+	items := a.visibleItemsInColumn(a.cursorCol)
+	cardViews := a.renderGroupedCards(items, a.cursorCol)
+	if len(cardViews) == 0 {
+		a.colScrollY[a.cursorCol] = 0
+		return
+	}
+	cardContent := strings.Join(cardViews, "\n")
+	cardLines := strings.Split(cardContent, "\n")
+
+	viewH := a.contentViewHeight()
+	if viewH <= 0 || len(cardLines) <= viewH {
+		a.colScrollY[a.cursorCol] = 0
+		return
+	}
+
+	maxOffset := len(cardLines) - viewH
+
+	// Find the selected item's marker line
+	marker := fmt.Sprintf("#%d ", item.DisplayNum)
+	cardTop := -1
+	for i, line := range cardLines {
+		if strings.Contains(line, marker) {
+			cardTop = i
+			break
+		}
+	}
+	if cardTop < 0 {
+		return
+	}
+
+	offset := a.colScrollY[a.cursorCol]
+
+	// Scroll up if item is above viewport (with 2-line margin)
+	if cardTop < offset+2 {
+		offset = cardTop - 2
+	}
+	// Scroll down if item is below viewport
+	if cardTop > offset+viewH-6 {
+		offset = cardTop - viewH + 6
+	}
+
+	// Clamp
+	if offset > maxOffset {
+		offset = maxOffset
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	a.colScrollY[a.cursorCol] = offset
+}
+
+// contentViewHeight returns the available height for card content inside a column.
+func (a App) contentViewHeight() int {
+	// a.height minus: board header(1) + help bar(1) + column border(2) + column header(1)
+	h := a.height - 5
+	if h < 1 {
+		return 0
+	}
+	return h
+}
+
 func (a *App) clampCursor() {
 	if a.cursorCol >= len(a.columns) {
 		a.cursorCol = len(a.columns) - 1
@@ -164,27 +238,32 @@ func (a App) handleBoardKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			a.cursorCol--
 			a.cursorRow = 0
 			a.clampCursor()
+			a.scrollToSelected()
 		}
 	case "l", "right":
 		if a.cursorCol < len(a.columns)-1 {
 			a.cursorCol++
 			a.cursorRow = 0
 			a.clampCursor()
+			a.scrollToSelected()
 		}
 	case "tab":
 		if len(a.columns) > 0 {
 			a.cursorCol = (a.cursorCol + 1) % len(a.columns)
 			a.cursorRow = 0
 			a.clampCursor()
+			a.scrollToSelected()
 		}
 	case "j", "down":
 		items := a.visibleItemsInColumn(a.cursorCol)
 		if a.cursorRow < len(items)-1 {
 			a.cursorRow++
+			a.scrollToSelected()
 		}
 	case "k", "up":
 		if a.cursorRow > 0 {
 			a.cursorRow--
+			a.scrollToSelected()
 		}
 	case "enter":
 		if item := a.selectedItem(); item != nil {
@@ -238,8 +317,12 @@ func (a App) handleBoardKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return a, a.loadBoard()
 		}
 	case " ":
-		if item := a.selectedItem(); item != nil && item.Type == domain.ItemTypeEpic {
-			a.collapsed[item.ID] = !a.collapsed[item.ID]
+		if item := a.selectedItem(); item != nil {
+			epicID := findEpicAncestor(a.board, item)
+			if epicID != "" {
+				a.collapsed[epicID] = !a.collapsed[epicID]
+				a.clampCursor()
+			}
 		}
 	case "/":
 		a.input = newInputModel("Search:")
