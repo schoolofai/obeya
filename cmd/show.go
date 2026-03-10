@@ -22,6 +22,7 @@ var showCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(showCmd)
 	showCmd.Flags().String("format", "", "output format (json)")
+	showCmd.Flags().Bool("json", false, "output as JSON (shorthand for --format json)")
 	showCmd.Flags().BoolP("verbose", "v", false, "show detailed children info (priority, assignee, description)")
 }
 
@@ -36,8 +37,9 @@ func runShow(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	jsonFlag, _ := cmd.Flags().GetBool("json")
 	format, _ := cmd.Flags().GetString("format")
-	if format == "json" {
+	if jsonFlag || format == "json" {
 		return printShowJSON(item, eng)
 	}
 

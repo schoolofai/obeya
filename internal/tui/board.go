@@ -356,7 +356,7 @@ func (a App) visibleItemsInColumn(colIdx int) []*domain.Item {
 		}
 	}
 	sort.Slice(colItems, func(i, j int) bool {
-		return colItems[i].DisplayNum < colItems[j].DisplayNum
+		return colItems[i].DisplayNum > colItems[j].DisplayNum
 	})
 
 	// Include cross-column parent epics so they are navigable.
@@ -375,7 +375,7 @@ func (a App) visibleItemsInColumn(colIdx int) []*domain.Item {
 
 	// Re-sort after adding cross-column epics.
 	sort.Slice(colItems, func(i, j int) bool {
-		return colItems[i].DisplayNum < colItems[j].DisplayNum
+		return colItems[i].DisplayNum > colItems[j].DisplayNum
 	})
 
 	// Filter collapsed children.
