@@ -388,6 +388,15 @@ func WIPStatus(board *domain.Board) []ColumnWIP {
 	return result
 }
 
+// BoardItems converts the board's item map to a slice.
+func BoardItems(board *domain.Board) []*domain.Item {
+	items := make([]*domain.Item, 0, len(board.Items))
+	for _, item := range board.Items {
+		items = append(items, item)
+	}
+	return items
+}
+
 // FormatDuration formats a duration as a human-readable string.
 func FormatDuration(d time.Duration) string {
 	if d < time.Minute {

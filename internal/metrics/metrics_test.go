@@ -309,6 +309,19 @@ func TestWIPStatus_NoLimits(t *testing.T) {
 	}
 }
 
+func TestBoardItems(t *testing.T) {
+	board := &domain.Board{
+		Items: map[string]*domain.Item{
+			"a": {ID: "a", Status: "todo"},
+			"b": {ID: "b", Status: "done"},
+		},
+	}
+	items := BoardItems(board)
+	if len(items) != 2 {
+		t.Errorf("expected 2 items, got %d", len(items))
+	}
+}
+
 func TestDwellComputation(t *testing.T) {
 	now := time.Date(2026, 3, 10, 12, 0, 0, 0, time.UTC)
 	items := []*domain.Item{
