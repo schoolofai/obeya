@@ -216,6 +216,55 @@ func TestRollingAverage(t *testing.T) {
 	}
 }
 
+func TestWIPStatus_WithLimits(t *testing.T) {
+	board := &domain.Board{
+		Columns: []domain.Column{
+			{Name: "todo", Limit: 5},
+			{Name: "in-progress", Limit: 3},
+			{Name: "done", Limit: 0},
+		},
+		Items: map[string]*domain.Item{
+			"1": {ID: "1", Status: "todo"},
+			"2": {ID: "2", Status: "todo"},
+			"3": {ID: "3", Status: "todo"},
+			"4": {ID: "4", Status: "todo"},
+			"5": {ID: "5", Status: "in-progress"},
+			"6": {ID: "6", Status: "in-progress"},
+			"7": {ID: "7", Status: "in-progress"},
+			"8": {ID: "8", Status: "in-progress"},
+		},
+	}
+	result := WIPStatus(board)
+	if len(result) != 2 {
+		t.Fatalf("expected 2 columns, got %d", len(result))
+	}
+	if result[0].Name != "todo" || result[0].Level != "warn" {
+		t.Errorf("todo: expected warn, got %s (count=%d, limit=%d)", result[0].Level, result[0].Count, result[0].Limit)
+	}
+	if result[1].Name != "in-progress" || result[1].Level != "over" {
+		t.Errorf("in-progress: expected over, got %s (count=%d, limit=%d)", result[1].Level, result[1].Count, result[1].Limit)
+	}
+}
+
+func TestWIPStatus_NoLimits(t *testing.T) {
+	board := &domain.Board{
+		Columns: []domain.Column{
+			{Name: "todo", Limit: 0},
+			{Name: "done", Limit: 0},
+		},
+		Items: map[string]*domain.Item{
+			"1": {ID: "1", Status: "todo"},
+		},
+	}
+	result := WIPStatus(board)
+	if len(result) != 1 {
+		t.Fatalf("expected 1 column, got %d", len(result))
+	}
+	if result[0].Level != "ok" {
+		t.Errorf("expected ok, got %s", result[0].Level)
+	}
+}
+
 func TestDwellComputation(t *testing.T) {
 	now := time.Date(2026, 3, 10, 12, 0, 0, 0, time.UTC)
 	items := []*domain.Item{

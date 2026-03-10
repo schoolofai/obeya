@@ -14,6 +14,14 @@ type DayCount struct {
 	Count int
 }
 
+// ColumnWIP holds WIP status for a single column.
+type ColumnWIP struct {
+	Name  string
+	Count int
+	Limit int
+	Level string // "ok", "warn", "over"
+}
+
 // MoveDetailRe matches history entries like "status: backlog -> in-progress".
 var MoveDetailRe = regexp.MustCompile(`^status:\s*(\S+)\s*->\s*(\S+)$`)
 
@@ -279,6 +287,36 @@ func RollingAverage(days []DayCount, window int) []float64 {
 			sum += days[j].Count
 		}
 		result[i] = float64(sum) / float64(i-start+1)
+	}
+	return result
+}
+
+// WIPStatus computes WIP status for each non-done column on the board.
+func WIPStatus(board *domain.Board) []ColumnWIP {
+	counts := make(map[string]int)
+	for _, item := range board.Items {
+		counts[item.Status]++
+	}
+	result := make([]ColumnWIP, 0, len(board.Columns))
+	for _, col := range board.Columns {
+		if col.Name == "done" {
+			continue
+		}
+		wip := ColumnWIP{
+			Name:  col.Name,
+			Count: counts[col.Name],
+			Limit: col.Limit,
+			Level: "ok",
+		}
+		if col.Limit > 0 {
+			ratio := float64(wip.Count) / float64(col.Limit)
+			if ratio > 1.0 {
+				wip.Level = "over"
+			} else if ratio >= 0.8 {
+				wip.Level = "warn"
+			}
+		}
+		result = append(result, wip)
 	}
 	return result
 }
