@@ -8,6 +8,12 @@ import (
 	"github.com/niladribose/obeya/internal/domain"
 )
 
+// DayCount holds a date and the number of items completed on that date.
+type DayCount struct {
+	Date  time.Time
+	Count int
+}
+
 // MoveDetailRe matches history entries like "status: backlog -> in-progress".
 var MoveDetailRe = regexp.MustCompile(`^status:\s*(\S+)\s*->\s*(\S+)$`)
 
@@ -224,6 +230,57 @@ func AvgDuration(ds []time.Duration) time.Duration {
 		total += d
 	}
 	return total / time.Duration(len(ds))
+}
+
+// DailyVelocity returns per-day completion counts for the last N days.
+// Scans all item history for "moved to done" events independently —
+// counts each done transition (including reopened items done again).
+func DailyVelocity(items []*domain.Item, days int, now time.Time) []DayCount {
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	startDate := today.AddDate(0, 0, -(days - 1))
+
+	result := make([]DayCount, days)
+	for i := range result {
+		result[i].Date = startDate.AddDate(0, 0, i)
+	}
+
+	for _, item := range items {
+		for _, entry := range item.History {
+			if entry.Action != "moved" {
+				continue
+			}
+			m := MoveDetailRe.FindStringSubmatch(entry.Detail)
+			if m == nil || m[2] != "done" {
+				continue
+			}
+			entryDate := time.Date(
+				entry.Timestamp.Year(), entry.Timestamp.Month(), entry.Timestamp.Day(),
+				0, 0, 0, 0, entry.Timestamp.Location(),
+			)
+			dayIdx := int(entryDate.Sub(startDate).Hours() / 24)
+			if dayIdx >= 0 && dayIdx < days {
+				result[dayIdx].Count++
+			}
+		}
+	}
+	return result
+}
+
+// RollingAverage computes a rolling average over the given window size.
+func RollingAverage(days []DayCount, window int) []float64 {
+	result := make([]float64, len(days))
+	for i := range days {
+		start := i - window + 1
+		if start < 0 {
+			start = 0
+		}
+		sum := 0
+		for j := start; j <= i; j++ {
+			sum += days[j].Count
+		}
+		result[i] = float64(sum) / float64(i-start+1)
+	}
+	return result
 }
 
 // FormatDuration formats a duration as a human-readable string.

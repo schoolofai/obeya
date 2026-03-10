@@ -164,6 +164,58 @@ func TestBuildThroughput(t *testing.T) {
 	}
 }
 
+func TestDailyVelocity_NoDoneItems(t *testing.T) {
+	items := []*domain.Item{{ID: "a", Status: "in-progress", History: []domain.ChangeRecord{}}}
+	now := time.Date(2026, 3, 10, 12, 0, 0, 0, time.UTC)
+	result := DailyVelocity(items, 14, now)
+	if len(result) != 14 {
+		t.Errorf("expected 14 day slots, got %d", len(result))
+	}
+	for _, d := range result {
+		if d.Count != 0 {
+			t.Errorf("expected 0 count for %v, got %d", d.Date, d.Count)
+		}
+	}
+}
+
+func TestDailyVelocity_CountsEachDoneEvent(t *testing.T) {
+	now := time.Date(2026, 3, 10, 12, 0, 0, 0, time.UTC)
+	items := []*domain.Item{
+		{ID: "a", Status: "done", History: []domain.ChangeRecord{
+			{Action: "moved", Detail: "status: in-progress -> done", Timestamp: now.Add(-2 * time.Hour)},
+		}},
+		{ID: "b", Status: "done", History: []domain.ChangeRecord{
+			{Action: "moved", Detail: "status: in-progress -> done", Timestamp: now.Add(-26 * time.Hour)},
+			{Action: "moved", Detail: "status: done -> in-progress", Timestamp: now.Add(-25 * time.Hour)},
+			{Action: "moved", Detail: "status: in-progress -> done", Timestamp: now.Add(-3 * time.Hour)},
+		}},
+	}
+	result := DailyVelocity(items, 14, now)
+	if result[13].Count != 2 {
+		t.Errorf("expected 2 today, got %d", result[13].Count)
+	}
+	if result[12].Count != 1 {
+		t.Errorf("expected 1 yesterday, got %d", result[12].Count)
+	}
+}
+
+func TestRollingAverage(t *testing.T) {
+	days := []DayCount{{Count: 3}, {Count: 0}, {Count: 6}}
+	avg := RollingAverage(days, 3)
+	if len(avg) != 3 {
+		t.Fatalf("expected 3 values, got %d", len(avg))
+	}
+	if avg[0] != 3.0 {
+		t.Errorf("expected 3.0, got %f", avg[0])
+	}
+	if avg[1] != 1.5 {
+		t.Errorf("expected 1.5, got %f", avg[1])
+	}
+	if avg[2] != 3.0 {
+		t.Errorf("expected 3.0, got %f", avg[2])
+	}
+}
+
 func TestDwellComputation(t *testing.T) {
 	now := time.Date(2026, 3, 10, 12, 0, 0, 0, time.UTC)
 	items := []*domain.Item{
