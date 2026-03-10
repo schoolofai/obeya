@@ -17,4 +17,7 @@ type Store interface {
 
 	// BoardExists checks if a board has been initialized in the current directory.
 	BoardExists() bool
+
+	// BoardFilePath returns the path to the board file on disk.
+	BoardFilePath() string
 }

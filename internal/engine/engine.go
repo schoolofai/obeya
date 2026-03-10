@@ -16,6 +16,11 @@ func New(s store.Store) *Engine {
 	return &Engine{store: s}
 }
 
+// BoardFilePath returns the store's board file path (for file watching).
+func (e *Engine) BoardFilePath() string {
+	return e.store.BoardFilePath()
+}
+
 func (e *Engine) CreateItem(itemType, title, parentRef, description, priority, assignee string, tags []string) (*domain.Item, error) {
 	if err := validateCreateInput(itemType, title, priority); err != nil {
 		return nil, err

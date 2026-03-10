@@ -33,6 +33,10 @@ func (s *JSONStore) BoardExists() bool {
 	return err == nil
 }
 
+func (s *JSONStore) BoardFilePath() string {
+	return s.boardFile
+}
+
 func (s *JSONStore) InitBoard(name string, columns []string) error {
 	if s.BoardExists() {
 		return fmt.Errorf("board already initialized in %s", s.obeyaDir)

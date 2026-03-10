@@ -11,8 +11,9 @@ import (
 
 // App is the enhanced Bubble Tea model for the Obeya board TUI.
 type App struct {
-	engine *engine.Engine
-	board  *domain.Board
+	engine    *engine.Engine
+	board     *domain.Board
+	boardPath string // path to board.json for file watching
 
 	// Board navigation
 	columns    []string
@@ -35,13 +36,15 @@ type App struct {
 	width  int
 	height int
 
-	err error
+	watcher *boardWatcher
+	err     error
 }
 
 // NewApp creates a new enhanced TUI app backed by the given engine.
-func NewApp(eng *engine.Engine) App {
+func NewApp(eng *engine.Engine, boardPath string) App {
 	return App{
 		engine:     eng,
+		boardPath:  boardPath,
 		collapsed:  make(map[string]bool),
 		colScrollY: make(map[int]int),
 		state:      stateBoard,
@@ -49,7 +52,37 @@ func NewApp(eng *engine.Engine) App {
 }
 
 func (a App) Init() tea.Cmd {
-	return a.loadBoard()
+	return tea.Batch(a.loadBoard(), a.startWatching())
+}
+
+func (a App) startWatching() tea.Cmd {
+	return func() tea.Msg {
+		w, err := newBoardWatcher(a.boardPath)
+		if err != nil {
+			return watcherStartedMsg{watcher: nil, err: err}
+		}
+		return watcherStartedMsg{watcher: w}
+	}
+}
+
+func (a App) waitForFileChange() tea.Cmd {
+	return func() tea.Msg {
+		if a.watcher == nil {
+			return nil
+		}
+		select {
+		case _, ok := <-a.watcher.events():
+			if !ok {
+				return nil
+			}
+			return boardFileChangedMsg{}
+		case err, ok := <-a.watcher.errors():
+			if !ok {
+				return nil
+			}
+			return errMsg{err}
+		}
+	}
 }
 
 func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -66,6 +99,15 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case errMsg:
 		a.err = msg.err
 		return a, nil
+	case watcherStartedMsg:
+		a.watcher = msg.watcher
+		if msg.err != nil {
+			a.err = fmt.Errorf("file watcher failed: %w (press r to refresh manually)", msg.err)
+			return a, nil
+		}
+		return a, a.waitForFileChange()
+	case boardFileChangedMsg:
+		return a, tea.Batch(a.loadBoard(), a.waitForFileChange())
 	case tea.KeyMsg:
 		return a.handleKey(msg)
 	}
@@ -80,19 +122,35 @@ func (a App) View() string {
 		return "Loading board..."
 	}
 
+	var out string
 	switch a.state {
 	case stateDetail:
 		a.detail.SetSize(a.width, a.height)
 		return a.detail.View()
 	case statePicker:
-		return a.renderBoardWithOverlay(a.picker.View())
+		out = a.renderBoardWithOverlay(a.picker.View())
 	case stateInput:
-		return a.renderBoardWithOverlay(a.input.View())
+		out = a.renderBoardWithOverlay(a.input.View())
 	case stateConfirm:
-		return a.renderBoardWithOverlay(a.renderConfirm())
+		out = a.renderBoardWithOverlay(a.renderConfirm())
 	default:
-		return a.renderBoard()
+		out = a.renderBoard()
 	}
+
+	return a.clampHeight(out)
+}
+
+// clampHeight truncates rendered output to the terminal height so that
+// column headers at the top are never pushed off-screen.
+func (a App) clampHeight(s string) string {
+	if a.height <= 0 {
+		return s
+	}
+	lines := strings.Split(s, "\n")
+	if len(lines) <= a.height {
+		return s
+	}
+	return strings.Join(lines[:a.height], "\n")
 }
 
 func (a App) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
@@ -196,8 +254,8 @@ func (a *App) scrollToSelected() {
 
 // contentViewHeight returns the available height for card content inside a column.
 func (a App) contentViewHeight() int {
-	// a.height minus: board header(1) + help bar(1) + column border(2) + column header(1)
-	h := a.height - 5
+	// a.height minus: board header(1) + newline(1) + column border(2) + column header(1) + newline(1) + help bar(1)
+	h := a.height - 7
 	if h < 1 {
 		return 0
 	}
@@ -220,6 +278,13 @@ func (a *App) clampCursor() {
 	}
 }
 
+func (a App) quit() (tea.Model, tea.Cmd) {
+	if a.watcher != nil {
+		a.watcher.close()
+	}
+	return a, tea.Quit
+}
+
 func extractColumns(board *domain.Board) []string {
 	cols := make([]string, len(board.Columns))
 	for i, c := range board.Columns {
@@ -232,7 +297,7 @@ func extractColumns(board *domain.Board) []string {
 func (a App) handleBoardKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "q", "ctrl+c":
-		return a, tea.Quit
+		return a.quit()
 	case "h", "left":
 		if a.cursorCol > 0 {
 			a.cursorCol--
@@ -341,7 +406,7 @@ func (a App) handleDetailKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "esc":
 		a.state = stateBoard
 	case "q":
-		return a, tea.Quit
+		return a.quit()
 	case "tab":
 		a.detail.NextTab()
 	case "shift+tab":
@@ -390,7 +455,7 @@ func (a App) handlePickerKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "enter":
 		return a.executePickerSelection()
 	case "q":
-		return a, tea.Quit
+		return a.quit()
 	}
 	return a, nil
 }
