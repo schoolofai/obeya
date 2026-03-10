@@ -133,22 +133,10 @@ func (a App) View() string {
 	case stateConfirm:
 		return a.renderBoardWithOverlay(a.renderConfirm())
 	default:
-		return a.clampHeight(a.renderBoard())
+		return a.renderBoard()
 	}
 }
 
-// clampHeight truncates rendered output to the terminal height so that
-// column headers at the top are never pushed off-screen.
-func (a App) clampHeight(s string) string {
-	if a.height <= 0 {
-		return s
-	}
-	lines := strings.Split(s, "\n")
-	if len(lines) <= a.height {
-		return s
-	}
-	return strings.Join(lines[:a.height], "\n")
-}
 
 func (a App) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch a.state {
