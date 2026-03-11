@@ -10,39 +10,46 @@ Claim an unassigned task and move it to in-progress.
 
 ## Steps
 
-1. Run `ob list --format json` to get all items
-2. Find tasks that are:
-   - Status: `backlog` or `todo`
-   - Not blocked (empty `blocked_by`)
-   - Not assigned (empty `assignee`), OR assigned to the current user
-3. Pick the task with the lowest display number (highest priority first if equal)
-4. Run `ob move <id> in-progress` to claim it
-5. Display the picked task details to the user
-6. If no unassigned tasks are available, tell the user
+1. **Detect board type** — check if `.obeya-link` exists at git root:
+   - If linked: note the shared board name, and when displaying tasks show their `project` field so the user knows which project each task belongs to
+   - If local: proceed normally
+2. Run `ob list --format json` to get all items
+   - On a shared board, `ob list` returns items from **all linked projects** — use the `project` field on each item to tell them apart
+3. Find tasks that are: status `backlog` or `todo`, not blocked, not assigned (or assigned to current user)
+   - On a shared board with multiple projects, prefer tasks whose `project` field matches the current project unless the user requests otherwise
+   - The current project name is derived from the git remote (`org/repo` format) or the directory name as fallback — check items' `project` field against this
+4. Pick the highest-priority eligible task
+5. Run `ob move <id> in-progress` to claim it
+6. Display the picked task details to the user (include `project` field on shared boards)
+7. If no eligible tasks, tell the user
 
-## Plan Context (REQUIRED — do this after every pick)
+## Board Awareness (REQUIRED — scan the full board)
 
-You MUST check for plan context after picking the task. Do NOT skip this section.
+Before diving into your task's details, summarize the board state for the user. This prevents tunnel vision on your own work:
 
-### Check for unimported plans first
+1. Note any **blocking relationships** — which tasks are blocked and by what (e.g., "#4 is blocked by #3, so #4 can't start until #3 completes")
+2. Note which tasks are **eligible to pick** vs blocked vs already in-progress
+3. If completing your current task would **unblock** other tasks, call that out — it helps the user prioritize
 
-If a plan document was written, discussed, or approved in this conversation (from plan mode, a design doc, an implementation plan, or any markdown plan file), and it has NOT yet been imported into `ob plan`:
+## Parent Context (REQUIRED after pick)
 
-1. Save the plan content to a temporary file if it doesn't already exist on disk
-2. Run `ob plan import <path-to-plan-file> --link <picked-task-id>` to import and link
-3. Then continue to show the plan context below
+If the picked task has a parent story or epic, retrieve it so you understand the broader goal:
 
-### Show plan context
+1. Run `ob show <parent-id> --format json`
+2. Display the parent's title, description summary, and acceptance criteria
+3. This gives the agent context for why this task exists — without it, agents implement tasks in isolation without understanding the story-level goal they contribute to
 
-1. Run `ob plan list --format json` to get all plans
-2. Check if the picked task's ID or its parent's ID appears in any plan's `linked_items`
-3. If linked to a plan:
-   - Run `ob plan show <plan-id> --format json` to get the full plan
-   - Display a "**Plan:**" header with the plan title
-   - Match the picked task's title against plan headings and step descriptions
-   - Display the **most relevant section/step** from the plan (not the entire plan)
-   - If no specific section matches, show the first 10 lines of the plan as summary
-4. If no plan is linked, say "No plan linked to this task."
+## Plan Context (REQUIRED after pick)
+
+Surface any plan linked to this task so the agent has design context:
+
+1. If a plan was written in this conversation but not yet imported, import it first: `ob plan import <path> --link <task-id>`
+2. Run `ob plan list --format json`
+3. Check if the task's ID or parent's ID appears in any plan's `linked_items`
+4. If linked:
+   - Run `ob plan show <plan-id> --format json`
+   - Match the task title against plan headings and show the **most relevant section**
+5. If not linked, say "No plan linked to this task" and explain what was checked (this reasoning helps the user understand)
 
 ## Environment
 

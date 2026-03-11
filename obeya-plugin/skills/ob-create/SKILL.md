@@ -24,6 +24,10 @@ Create a new standalone item on the Obeya board.
 4. Run `ob create <type> "<title>" [flags]`
 5. Display the created item with its ID and display number
 
+## Shared Board Awareness
+
+When the project is linked to a shared board (`.obeya-link` exists at git root), items are created on the shared board and their `project` field is automatically set to the current project name (derived from the git remote `org/repo` or the directory name as fallback). All `ob` commands resolve through the link transparently — no extra flags needed.
+
 ## Description Quality (REQUIRED)
 
 Task descriptions must be self-contained so an agent can pick the task up cold. Before creating, ensure the description includes:
@@ -31,20 +35,36 @@ Task descriptions must be self-contained so an agent can pick the task up cold. 
 **For Epics:**
 - The objective and why it matters
 - Success criteria (how to know it's done)
-- Scope boundaries (what's in/out)
+- Scope boundaries with explicit IN and OUT sections — without an OUT section, agents drift into adjacent work:
+  - IN: what this epic delivers (e.g., auth endpoints, JWT tokens, middleware)
+  - OUT: what it explicitly excludes (e.g., OAuth2, RBAC, frontend changes)
 
 **For Stories:**
 - What needs to be built and why
 - Acceptance criteria (testable conditions)
 - Key dependencies on other stories/tasks
 
-**For Tasks:**
-- What to do (specific implementation steps)
-- How to verify it's done (test commands, expected behavior)
-- Dependencies on other tasks
-- Key file paths and references (e.g., "Modify src/cmd/show.go, see internal/domain/types.go for data model")
+**For Tasks** — use these named headers so agents can scan them when picking up work:
 
-If the caller provides a vague description (e.g., "implement feature"), expand it with context from the conversation before creating the task. A task an agent cannot start without asking questions is incomplete.
+```
+## What to do
+<specific implementation steps>
+
+## Key files
+<exact file paths — e.g., internal/auth/token.go, NOT just internal/auth/>
+
+## How to verify
+<executable shell command, not prose>
+
+## Dependencies
+<task IDs or titles this depends on>
+```
+
+Verification commands matter most. An agent executing this task will run your command verbatim:
+- Good: `go test ./internal/auth/ -run TestTokenGenerate -v`
+- Bad: "Verify that token generation works and tests pass"
+
+If the caller provides a vague description, expand it with context from the conversation before creating. A task an agent cannot start without asking questions is incomplete.
 
 ## Plan Linking (REQUIRED — do this after every create)
 
@@ -69,12 +89,3 @@ If no new plan needs importing:
    - Tell the user: "Linked to plan: <plan-title>"
 4. If no plan found at all, say "No plan linked."
 
-## Hierarchy Guidance
-
-When creating work from a plan, always build a hierarchy:
-1. Create an **epic** for the overall goal first
-2. Create **stories** as subtasks of the epic (use `/ob-subtask`) for each deliverable
-3. Create **tasks** as subtasks of each story for atomic work items
-4. Link all items to the plan
-
-Do NOT create flat lists of tasks. A flat task list without epic/story structure is incomplete.

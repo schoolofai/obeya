@@ -19,11 +19,7 @@ Import a plan and create a full epic/story/task hierarchy on the Obeya board wit
 
 ### 1. Find and import the plan
 
-If `$ARGUMENTS` is a file path, use it. Otherwise:
-
-1. Check if a plan was written in this conversation (look for recent plan files in `docs/superpowers/plans/` or similar)
-2. Run `ob plan list --format json` — check for plans with zero linked items
-3. If no plan found, ask the user for the plan file path
+If `$ARGUMENTS` is a file path, use it. Otherwise check for plans written in this conversation or run `ob plan list --format json` to find unlinked plans. If no plan found, ask the user.
 
 Import if not already imported:
 ```
@@ -46,7 +42,9 @@ ob create epic "<goal title>" --description "<description>"
 The epic description must include:
 - Objective: what we're building and why
 - Success criteria: how to know it's done
-- Scope: what's in and out
+- Scope with explicit IN and OUT sections (without OUT, agents drift into adjacent work):
+  - IN: what this epic delivers
+  - OUT: what it explicitly excludes
 - Reference: "See <plan-file-path> for full plan"
 
 Link to plan: `ob plan link <plan-id> --to <epic-id>`
@@ -75,12 +73,28 @@ For each atomic implementation step:
 ob create task "<step title>" -p <story-id> --description "<description>"
 ```
 
-Task descriptions MUST be self-contained. Include:
-- **What**: specific implementation steps
-- **Where**: key file paths to modify/create (e.g., "Modify cmd/show.go lines 45-60, add new flag in init()")
-- **How to verify**: test command or expected behavior (e.g., "Run `go test ./cmd/ -run TestShowVerbose` — should pass")
-- **Dependencies**: which other tasks must complete first
-- **Context**: any architectural decisions or constraints from the plan
+Task descriptions MUST be self-contained. Use these named headers so agents can scan them:
+
+```
+## What to do
+<specific implementation steps>
+
+## Key files
+<exact file paths — e.g., internal/api/v2/users/routes.go, NOT just internal/api/v2/users/>
+
+## How to verify
+<executable shell command — agents run this verbatim>
+
+## Dependencies
+<task IDs or titles that must complete first>
+
+## Context
+<architectural decisions or constraints from the plan>
+```
+
+Verification commands matter most:
+- Good: `go test ./cmd/ -run TestShowVerbose -v`
+- Bad: "Verify that the show command works correctly"
 
 Link to plan: `ob plan link <plan-id> --to <task-id>`
 
@@ -100,14 +114,16 @@ ob list --format json
 
 Display as a tree with item numbers, types, and titles. Confirm with the user that the breakdown looks correct.
 
-## Quality Checklist
+## Quality Checklist (run before telling user "done")
 
-Before finishing, verify:
-- [ ] Every plan step has a corresponding board task
-- [ ] All items are linked to the plan (`ob plan show <plan-id>` shows all linked items)
-- [ ] Task descriptions include file paths and verification commands
-- [ ] Dependencies between tasks are set via `ob block`
-- [ ] The hierarchy is epic → stories → tasks (not a flat list)
+This checklist catches gaps that become blockers later. Run each check:
+
+- [ ] Every plan step → board task (count plan steps, count tasks — they should match)
+- [ ] All items linked to plan (`ob plan show <plan-id>` confirms)
+- [ ] Every task has an executable verification command (not prose like "verify it works")
+- [ ] Every task names exact file paths (not just directories)
+- [ ] Dependencies set via `ob block` including cross-story deps
+- [ ] Hierarchy is epic → stories → tasks (not flat)
 
 ## Example Output
 

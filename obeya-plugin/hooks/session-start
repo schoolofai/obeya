@@ -15,11 +15,22 @@ elif command -v obeya &>/dev/null; then
     OB_CMD="obeya"
 fi
 
-# Check if board is initialized (look for .obeya/board.json in git root)
+# Check if board is initialized (local or linked)
 board_initialized="false"
+board_type="none"
+linked_board_name=""
 git_root=$(git rev-parse --show-toplevel 2>/dev/null || echo "")
-if [ -n "$git_root" ] && [ -f "${git_root}/.obeya/board.json" ]; then
-    board_initialized="true"
+if [ -n "$git_root" ]; then
+    if [ -f "${git_root}/.obeya-link" ]; then
+        linked_board_name=$(cat "${git_root}/.obeya-link" 2>/dev/null | tr -d '[:space:]')
+        if [ -n "$linked_board_name" ]; then
+            board_initialized="true"
+            board_type="linked"
+        fi
+    elif [ -f "${git_root}/.obeya/board.json" ]; then
+        board_initialized="true"
+        board_type="local"
+    fi
 fi
 
 # Build context based on board state
@@ -30,7 +41,13 @@ if [ "$board_initialized" = "true" ]; then
         in_progress=$($OB_CMD list --status in-progress --format json 2>/dev/null | grep -c '"id"' || echo "0")
     fi
 
-    context="<IMPORTANT>Obeya Task Tracking is ACTIVE for this project."
+    if [ "$board_type" = "linked" ]; then
+        board_label="ACTIVE (linked to shared board: ${linked_board_name})"
+    else
+        board_label="ACTIVE (local board)"
+    fi
+
+    context="<IMPORTANT>Obeya Task Tracking is ${board_label} for this project."
     context="${context}\n\nYou MUST invoke the obeya:ob-status skill (using the Skill tool) BEFORE invoking any other skill — including superpowers skills like brainstorming, writing-plans, or subagent-driven-development. This is not optional."
     context="${context}\n\nThe sequence is: ob-status FIRST, then other skills. If ob-status shows no task for the current work, invoke obeya:ob-create to create one before proceeding."
     context="${context}\n\nWhen ANY workflow completes work (including marking TodoWrite items done), invoke obeya:ob-done to keep the board in sync."
@@ -49,7 +66,7 @@ if [ "$board_initialized" = "true" ]; then
     fi
 else
     # No board — just note obeya is available
-    context="Obeya task tracking plugin is installed. Run ob init to set up a board for this project."
+    context="Obeya task tracking plugin is installed. Run 'ob init' to set up a local board, or 'ob link <name>' to connect to a shared board (use 'ob boards' to list available shared boards)."
 fi
 
 # Escape for JSON

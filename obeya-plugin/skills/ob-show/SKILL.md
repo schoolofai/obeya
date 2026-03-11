@@ -25,6 +25,7 @@ Display complete details of a board item.
 4. Display the item details in a readable format:
    - **Header**: `#<display_num> — <title>` with type badge (epic/story/task)
    - **Status**: current column, priority, assignee
+   - **Project**: if on a shared board, show the item's `project` field (which project owns this item)
    - **Description**: full text
    - **Parent**: if this is a child item, show the parent's title and ID
    - **Children**: list any child items with their status

@@ -59,11 +59,40 @@ claude plugin marketplace remove obeya-local
 
 ## Setup
 
+### Local board (single project)
+
 1. Initialize a board in your project: `ob init`
 2. Register yourself: `ob user add "Your Name" --type human`
 3. Register agents: `ob user add "Claude" --type agent --provider claude-code`
 4. Create work items: `ob create epic "My Feature"`
 5. Use `/ob:pick` in Claude Code to start working
+
+### Shared board (multi-project)
+
+A shared board lives at `~/.obeya/boards/<name>/` and can be linked from multiple projects:
+
+1. Create a shared board: `ob init --shared teamboard`
+2. In each project directory, link to it: `ob link teamboard`
+   - If the project has existing local tasks: `ob link teamboard --migrate`
+3. All `ob` commands now operate on the shared board transparently
+4. Items carry a `project` field so you can tell which project owns each task
+
+### Detecting board type
+
+| What you see | Board type |
+|---|---|
+| `.obeya-link` file at git root | Linked to a shared board (file contains the board name) |
+| `.obeya/board.json` at git root | Local board (project-specific) |
+| Neither | No board initialized |
+
+### Managing shared boards
+
+| Command | Description |
+|---|---|
+| `ob boards` | List all shared boards with linked project counts |
+| `ob link <name>` | Link current project to a shared board |
+| `ob link <name> --migrate` | Link and move local tasks to the shared board |
+| `ob unlink` | Disconnect current project from shared board |
 
 ## Updating
 
