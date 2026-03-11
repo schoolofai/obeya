@@ -50,3 +50,44 @@ When a plan document is created, discussed, or approved:
 Use `ob list --format json` for full board state.
 
 <!-- obeya:end -->
+
+## Releasing to Homebrew
+
+The `ob` CLI is distributed via Homebrew through `schoolofai/homebrew-tap`. The release pipeline is fully automated — pushing a git tag triggers everything.
+
+### How it works
+
+```
+git tag v0.x.0 → push tag → GitHub Actions → GoReleaser → builds binaries + creates GitHub Release + pushes Formula/obeya.rb to schoolofai/homebrew-tap
+```
+
+Key files:
+- `.goreleaser.yml` — build config, archive format, Homebrew formula template
+- `.github/workflows/release.yml` — GitHub Actions workflow triggered by `v*` tags
+- `scripts/release.sh` — release script with preflight checks
+
+### How to release
+
+```bash
+./scripts/release.sh 0.1.0                          # with default message
+./scripts/release.sh 0.2.0 "feat: shared boards"    # with custom message
+```
+
+The script runs preflight checks (clean tree, on main, synced with remote, tests pass), then creates and pushes the tag.
+
+### Secrets required
+
+- `HOMEBREW_TAP_TOKEN` — a GitHub PAT with write access to `schoolofai/homebrew-tap`. Stored in GitHub repo settings > Secrets > Actions. GoReleaser uses it to push the formula file.
+
+### End-user install
+
+```bash
+brew tap schoolofai/tap
+brew install obeya
+```
+
+### Troubleshooting releases
+
+- **Build fails**: check Go version in `.github/workflows/release.yml` matches `go.mod`
+- **Formula push fails**: verify `HOMEBREW_TAP_TOKEN` PAT has `repo` or `public_repo` scope on `schoolofai/homebrew-tap`
+- **Tests fail in pipeline**: GoReleaser runs `go test ./...` as a pre-hook — fix tests locally first
