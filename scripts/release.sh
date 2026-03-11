@@ -9,18 +9,30 @@ set -euo pipefail
 # Usage:
 #   ./scripts/release.sh 0.2.0
 #   ./scripts/release.sh 0.2.0 "feat: shared board support"
+#   ./scripts/release.sh --yes 0.2.0          # non-interactive (for agents)
+#   ./scripts/release.sh -y 0.2.0 "message"   # non-interactive (for agents)
+
+AUTO_CONFIRM=false
+while [[ "${1:-}" == -* ]]; do
+    case "$1" in
+        -y|--yes) AUTO_CONFIRM=true; shift ;;
+        *) echo "ERROR: Unknown flag '$1'"; exit 1 ;;
+    esac
+done
 
 VERSION="${1:-}"
 MESSAGE="${2:-}"
 
 if [ -z "$VERSION" ]; then
-    echo "Usage: $0 <version> [message]"
-    echo "  version: semver without 'v' prefix (e.g., 0.1.0, 1.0.0)"
-    echo "  message: optional tag message (default: 'Release v<version>')"
+    echo "Usage: $0 [-y|--yes] <version> [message]"
+    echo "  -y, --yes: skip confirmation prompts (for CI/agents)"
+    echo "  version:   semver without 'v' prefix (e.g., 0.1.0, 1.0.0)"
+    echo "  message:   optional tag message (default: 'Release v<version>')"
     echo ""
     echo "Examples:"
     echo "  $0 0.1.0"
     echo "  $0 0.2.0 \"feat: shared board support\""
+    echo "  $0 --yes 0.1.0                          # non-interactive"
     exit 1
 fi
 
@@ -64,13 +76,18 @@ if [ "$LOCAL" != "$REMOTE" ]; then
     fi
     if [ "$AHEAD" -gt 0 ]; then
         echo "WARNING: Local is ${AHEAD} commit(s) ahead of origin/main."
-        read -rp "Push to main before tagging? [Y/n] " PUSH_ANSWER
-        if [ "${PUSH_ANSWER:-Y}" != "n" ] && [ "${PUSH_ANSWER:-Y}" != "N" ]; then
+        if [ "$AUTO_CONFIRM" = true ]; then
             git push origin main
-            echo "[ok] Pushed to main"
+            echo "[ok] Pushed to main (auto-confirmed)"
         else
-            echo "ERROR: Cannot tag without pushing. Remote must have these commits."
-            exit 1
+            read -rp "Push to main before tagging? [Y/n] " PUSH_ANSWER
+            if [ "${PUSH_ANSWER:-Y}" != "n" ] && [ "${PUSH_ANSWER:-Y}" != "N" ]; then
+                git push origin main
+                echo "[ok] Pushed to main"
+            else
+                echo "ERROR: Cannot tag without pushing. Remote must have these commits."
+                exit 1
+            fi
         fi
     fi
 fi
@@ -94,11 +111,13 @@ echo ""
 echo "=== Creating release ==="
 echo "Tag:     ${TAG}"
 echo "Message: ${MESSAGE}"
-echo ""
-read -rp "Create and push tag? [Y/n] " CONFIRM
-if [ "${CONFIRM:-Y}" = "n" ] || [ "${CONFIRM:-Y}" = "N" ]; then
-    echo "Aborted."
-    exit 0
+if [ "$AUTO_CONFIRM" = false ]; then
+    echo ""
+    read -rp "Create and push tag? [Y/n] " CONFIRM
+    if [ "${CONFIRM:-Y}" = "n" ] || [ "${CONFIRM:-Y}" = "N" ]; then
+        echo "Aborted."
+        exit 0
+    fi
 fi
 
 git tag -a "$TAG" -m "$MESSAGE"

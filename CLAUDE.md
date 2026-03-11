@@ -69,8 +69,10 @@ Key files:
 ### How to release
 
 ```bash
-./scripts/release.sh 0.1.0                          # with default message
-./scripts/release.sh 0.2.0 "feat: shared boards"    # with custom message
+./scripts/release.sh 0.1.0                          # interactive, with default message
+./scripts/release.sh 0.2.0 "feat: shared boards"    # interactive, with custom message
+./scripts/release.sh --yes 0.1.0                     # non-interactive (for agents/CI)
+./scripts/release.sh -y 0.2.0 "feat: shared boards"  # non-interactive with message
 ```
 
 The script runs preflight checks (clean tree, on main, synced with remote, tests pass), then creates and pushes the tag.
