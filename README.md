@@ -25,17 +25,42 @@ Grab the latest release from [GitHub Releases](https://github.com/schoolofai/obe
 
 ## Quick Start
 
+### With Claude Code (recommended)
+
+```bash
+# 1. Install obeya
+brew tap schoolofai/tap
+brew install obeya
+
+# 2. Install the Claude Code plugin (gives your agent ob skills + hooks)
+ob plugin claude-install
+
+# 3. Initialize a board — pick one:
+
+# Option A: Local board (per-project, stored in .obeya/)
+ob init --agent claude-code
+
+# Option B: Shared board (global, stored in ~/.obeya/boards/)
+ob init --shared myboard --agent claude-code
+# Then link any project to it:
+ob link myboard
+
+# Or just start a Claude Code session — the agent will suggest running ob init
+```
+
+### Standalone (terminal only)
+
 ```bash
 # Initialize a board in your project
-ob init
+ob init --shared myboard
 
 # Register yourself
 ob user add "Your Name" --type human
 
 # Create work items
-ob create epic "Auth System"
-ob create story "OAuth flow" --parent <epic-id>
-ob create task "Add token refresh" --parent <story-id>
+ob create epic "Auth System" -d "Build authentication system"
+ob create story "OAuth flow" -d "Implement OAuth2" --parent <epic-id>
+ob create task "Add token refresh" -d "Handle token expiry" --parent <story-id>
 
 # Work the board
 ob list                    # View all items
@@ -61,11 +86,12 @@ ob move <id> done          # Mark complete
 ### Shared board commands
 
 ```bash
-ob init --shared teamboard       # Create a shared board
-ob link teamboard                # Link current project
-ob link teamboard --migrate      # Link and move existing tasks
-ob boards                        # List all shared boards
-ob unlink                        # Disconnect from shared board
+ob init --shared teamboard                    # Create a shared board (no agent setup)
+ob init --shared teamboard --agent claude-code # Create shared board + agent setup
+ob link teamboard                             # Link current project
+ob link teamboard --migrate                   # Link and move existing tasks
+ob boards                                     # List all shared boards
+ob unlink                                     # Disconnect from shared board
 ```
 
 ## Commands
@@ -84,9 +110,25 @@ ob unlink                        # Disconnect from shared board
 
 ## Claude Code Plugin
 
-Obeya ships with a Claude Code plugin that gives your AI agent `/ob` slash commands for task management.
+Obeya ships with a Claude Code plugin that gives your AI agent `/ob` slash commands for task management. The plugin installs globally (user scope) so it's available in every project.
 
-See [obeya-plugin/README.md](obeya-plugin/README.md) for installation and usage.
+```bash
+# Install the plugin (one-time, global)
+ob plugin claude-install
+
+# Initialize a local board with agent setup
+ob init --agent claude-code
+
+# Or create a shared board with agent setup (writes to ~/.claude/CLAUDE.md)
+ob init --shared myboard --agent claude-code
+```
+
+The plugin provides:
+- **SessionStart hook** -- injects Obeya context into every conversation
+- **PostToolUse hook** -- reminds the agent to track plans on the board
+- **13 skills** -- `/ob`, `/ob-status`, `/ob-pick`, `/ob-done`, `/ob-create`, and more
+
+See [obeya-plugin/README.md](obeya-plugin/README.md) for details.
 
 ## License
 
