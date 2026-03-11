@@ -65,7 +65,7 @@ func installClaudePlugin() error {
 	_ = claudeBin
 
 	// Register marketplace
-	regCmd := exec.Command("claude", "mcp", "add-marketplace", marketplaceURL)
+	regCmd := exec.Command("claude", "plugin", "marketplace", "add", marketplaceURL)
 	if out, err := regCmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("failed to register marketplace: %s: %w", string(out), err)
 	}
