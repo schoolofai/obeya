@@ -11,6 +11,7 @@ type AgentContext struct {
 	Root       string // project root directory
 	BoardName  string // board name for summary output
 	SkipPlugin bool   // --skip-plugin flag
+	Shared     bool   // true when --shared + --agent are used together
 }
 
 // AgentSetup defines the interface for agent-specific initialization.

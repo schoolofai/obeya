@@ -20,17 +20,17 @@ var initShared string
 var initCmd = &cobra.Command{
 	Use:   "init [name]",
 	Short: "Initialize a new Obeya board",
-	Long:  "Initialize a new Obeya board with agent integration. Requires --agent flag.\nUse --shared for storage-only boards (no agent integration).",
+	Long:  "Initialize a new Obeya board with agent integration. Requires --agent flag.\nUse --shared for storage-only boards. Combine --shared with --agent for global Obeya.",
 	Args:  cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		columns := parseColumns(initColumns)
 
-		// --shared and --agent are mutually exclusive
+		// Shared + agent = shared board with agent setup
 		if initShared != "" && initAgent != "" {
-			return fmt.Errorf("--shared and --agent are mutually exclusive. Shared boards do not support agent integration")
+			return initSharedBoardWithAgent(initShared, initAgent, columns)
 		}
 
-		// Shared board path (no agent needed)
+		// Shared board path (no agent)
 		if initShared != "" {
 			return initSharedBoard(initShared, columns)
 		}
@@ -94,6 +94,35 @@ func init() {
 	initCmd.Flags().StringVar(&initRoot, "root", "", "directory to create .obeya in (default: git repository root)")
 	initCmd.Flags().StringVar(&initShared, "shared", "", "create a shared board at ~/.obeya/boards/<name>")
 	rootCmd.AddCommand(initCmd)
+}
+
+func initSharedBoardWithAgent(sharedName, agentName string, columns []string) error {
+	agentSetup, err := agent.Get(agentName)
+	if err != nil {
+		return err
+	}
+
+	// Create shared board
+	if err := initSharedBoard(sharedName, columns); err != nil {
+		if !strings.Contains(err.Error(), "already exists") {
+			return err
+		}
+		fmt.Printf("Shared board %q already exists — proceeding with agent setup\n", sharedName)
+	}
+
+	obeyaHome, err := store.ObeyaHome()
+	if err != nil {
+		return err
+	}
+	boardDir := store.SharedBoardDir(obeyaHome, sharedName)
+
+	ctx := agent.AgentContext{
+		Root:       boardDir,
+		BoardName:  sharedName,
+		SkipPlugin: initSkipPlugin,
+		Shared:     true,
+	}
+	return agentSetup.Setup(ctx)
 }
 
 func initSharedBoard(boardName string, columns []string) error {

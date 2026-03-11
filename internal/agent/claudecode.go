@@ -29,10 +29,19 @@ func (c *ClaudeCodeSetup) Name() string { return "claude-code" }
 // Setup updates CLAUDE.md and optionally installs the Claude plugin.
 func (c *ClaudeCodeSetup) Setup(ctx AgentContext) error {
 	claudePath := filepath.Join(ctx.Root, "CLAUDE.md")
+	if ctx.Shared {
+		// Shared board: write to global ~/.claude/CLAUDE.md
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return fmt.Errorf("failed to determine home directory: %w", err)
+		}
+		claudePath = filepath.Join(home, ".claude", "CLAUDE.md")
+	}
+
 	if err := AppendClaudeMDAt(claudePath); err != nil {
 		return fmt.Errorf("could not update CLAUDE.md: %w", err)
 	}
-	fmt.Println("Updated CLAUDE.md with Obeya board instructions")
+	fmt.Printf("Updated CLAUDE.md at %s\n", claudePath)
 
 	if !ctx.SkipPlugin {
 		if err := installClaudePlugin(); err != nil {

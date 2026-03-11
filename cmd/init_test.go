@@ -60,18 +60,38 @@ func TestInit_RejectsUnknownAgent(t *testing.T) {
 	}
 }
 
-func TestInit_SharedAndAgentMutuallyExclusive(t *testing.T) {
+func TestInit_SharedAndAgentCreatesSharedBoardWithSetup(t *testing.T) {
 	bin := buildOb(t)
 	dir := t.TempDir()
 	os.MkdirAll(filepath.Join(dir, ".git"), 0755)
 
-	cmd := exec.Command(bin, "init", "--shared", "test", "--agent", "claude-code")
+	boardName := "test-shared-" + t.Name()
+
+	// Use --skip-plugin to avoid needing claude CLI
+	cmd := exec.Command(bin, "init", "--shared", boardName, "--agent", "claude-code", "--skip-plugin")
 	cmd.Dir = dir
 	out, err := cmd.CombinedOutput()
-	if err == nil {
-		t.Fatal("expected error when --shared and --agent both provided")
+	if err != nil {
+		t.Fatalf("expected success for --shared + --agent, got error: %s", out)
 	}
-	if !strings.Contains(string(out), "mutually exclusive") {
-		t.Errorf("expected mutual exclusivity message, got: %s", out)
+
+	// Verify shared board was created
+	home, _ := os.UserHomeDir()
+	boardFile := filepath.Join(home, ".obeya", "boards", boardName, ".obeya", "board.json")
+	if _, err := os.Stat(boardFile); err != nil {
+		t.Errorf("shared board not created at %s", boardFile)
 	}
+
+	// Verify global CLAUDE.md was updated
+	claudeMD := filepath.Join(home, ".claude", "CLAUDE.md")
+	claudeData, err := os.ReadFile(claudeMD)
+	if err != nil {
+		t.Fatalf("could not read global CLAUDE.md: %v", err)
+	}
+	if !strings.Contains(string(claudeData), "Task Tracking — Obeya") {
+		t.Error("global CLAUDE.md does not contain Obeya section")
+	}
+
+	// Cleanup
+	os.RemoveAll(filepath.Join(home, ".obeya", "boards", boardName))
 }
