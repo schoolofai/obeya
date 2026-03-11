@@ -191,6 +191,9 @@ func AppendClaudeMDAt(claudePath string) error {
 	}
 
 	// Case 3: Fresh append
+	if err := os.MkdirAll(filepath.Dir(claudePath), 0755); err != nil {
+		return fmt.Errorf("failed to create directory for CLAUDE.md: %w", err)
+	}
 	f, err := os.OpenFile(claudePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return fmt.Errorf("failed to open CLAUDE.md: %w", err)
