@@ -50,6 +50,7 @@ brews:
       owner: schoolofai
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    directory: Formula
     name: obeya
     homepage: "https://github.com/schoolofai/obeya"
     description: "CLI Kanban board for humans and AI agents"
