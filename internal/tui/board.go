@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/niladribose/obeya/internal/domain"
@@ -521,4 +522,55 @@ func truncate(s string, maxLen int) string {
 		return s[:maxLen]
 	}
 	return s[:maxLen-3] + "..."
+}
+
+// wrapText word-wraps s into lines of at most maxWidth runes.
+// Breaks on word boundaries when possible; breaks mid-word only when
+// a single word exceeds maxWidth. Uses rune count for correct Unicode handling.
+func wrapText(s string, maxWidth int) []string {
+	if maxWidth <= 0 {
+		return []string{s}
+	}
+	if utf8.RuneCountInString(s) <= maxWidth {
+		return []string{s}
+	}
+
+	words := strings.Fields(s)
+	if len(words) == 0 {
+		return []string{""}
+	}
+
+	var lines []string
+	cur := ""
+	curLen := 0
+	for _, word := range words {
+		wordLen := utf8.RuneCountInString(word)
+		if cur == "" {
+			// First word on the line — may need mid-word break
+			runes := []rune(word)
+			for len(runes) > maxWidth {
+				lines = append(lines, string(runes[:maxWidth]))
+				runes = runes[maxWidth:]
+			}
+			cur = string(runes)
+			curLen = len(runes)
+			continue
+		}
+		if curLen+1+wordLen <= maxWidth {
+			cur += " " + word
+			curLen += 1 + wordLen
+		} else {
+			lines = append(lines, cur)
+			// Start new line — may need mid-word break
+			runes := []rune(word)
+			for len(runes) > maxWidth {
+				lines = append(lines, string(runes[:maxWidth]))
+				runes = runes[maxWidth:]
+			}
+			cur = string(runes)
+			curLen = len(runes)
+		}
+	}
+	lines = append(lines, cur)
+	return lines
 }
