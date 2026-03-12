@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "appwrite": {
+      "command": "npx",
+      "args": ["-y", "@appwrite/mcp"],
+      "env": {
+        "APPWRITE_API_KEY": "",
+        "APPWRITE_PROJECT_ID": "",
+        "APPWRITE_ENDPOINT": "https://cloud.appwrite.io/v1"
+      }
+    }
+  }
+}
