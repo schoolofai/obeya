@@ -15,7 +15,7 @@ func TestWatcherSendsMessageOnFileChange(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	w, err := newBoardWatcher(boardFile)
+	w, err := newLocalBoardWatcher(boardFile)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -49,7 +49,7 @@ func TestWatcherDebounceCoalescesRapidWrites(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	w, err := newBoardWatcher(boardFile)
+	w, err := newLocalBoardWatcher(boardFile)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -90,7 +90,7 @@ func TestWatcherCloseStopsWatching(t *testing.T) {
 	boardFile := filepath.Join(dir, "board.json")
 	os.WriteFile(boardFile, []byte(`{}`), 0644)
 
-	w, err := newBoardWatcher(boardFile)
+	w, err := newLocalBoardWatcher(boardFile)
 	if err != nil {
 		t.Fatal(err)
 	}

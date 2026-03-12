@@ -13,16 +13,23 @@ type boardFileChangedMsg struct{}
 
 // watcherStartedMsg carries the initialized watcher (or nil on failure).
 type watcherStartedMsg struct {
-	watcher *boardWatcher
+	watcher boardWatcher
 	err     error
 }
 
 const debounceInterval = 100 * time.Millisecond
 
-// boardWatcher watches a directory for changes to a specific file.
+// boardWatcher is the common interface for local (fsnotify) and cloud (WebSocket) watchers.
+type boardWatcher interface {
+	events() <-chan struct{}
+	errors() <-chan error
+	close()
+}
+
+// localBoardWatcher watches a directory for changes to a specific file.
 // It watches the directory (not the file) because writeBoard() uses
 // atomic rename (tmp -> board.json), which replaces the inode.
-type boardWatcher struct {
+type localBoardWatcher struct {
 	watcher   *fsnotify.Watcher
 	eventCh   chan struct{}
 	errCh     chan error
@@ -31,7 +38,7 @@ type boardWatcher struct {
 	fileName  string // just the base name, e.g. "board.json"
 }
 
-func newBoardWatcher(boardFilePath string) (*boardWatcher, error) {
+func newLocalBoardWatcher(boardFilePath string) (*localBoardWatcher, error) {
 	w, err := fsnotify.NewWatcher()
 	if err != nil {
 		return nil, err
@@ -43,7 +50,7 @@ func newBoardWatcher(boardFilePath string) (*boardWatcher, error) {
 		return nil, err
 	}
 
-	bw := &boardWatcher{
+	bw := &localBoardWatcher{
 		watcher:  w,
 		eventCh:  make(chan struct{}, 1),
 		errCh:    make(chan error, 1),
@@ -55,7 +62,7 @@ func newBoardWatcher(boardFilePath string) (*boardWatcher, error) {
 	return bw, nil
 }
 
-func (bw *boardWatcher) loop() {
+func (bw *localBoardWatcher) loop() {
 	var timer *time.Timer
 	defer func() {
 		if timer != nil {
@@ -100,15 +107,15 @@ func (bw *boardWatcher) loop() {
 	}
 }
 
-func (bw *boardWatcher) events() <-chan struct{} {
+func (bw *localBoardWatcher) events() <-chan struct{} {
 	return bw.eventCh
 }
 
-func (bw *boardWatcher) errors() <-chan error {
+func (bw *localBoardWatcher) errors() <-chan error {
 	return bw.errCh
 }
 
-func (bw *boardWatcher) close() {
+func (bw *localBoardWatcher) close() {
 	bw.closeOnce.Do(func() {
 		close(bw.done)
 		bw.watcher.Close()

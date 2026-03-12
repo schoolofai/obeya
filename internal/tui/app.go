@@ -41,7 +41,7 @@ type App struct {
 	width  int
 	height int
 
-	watcher *boardWatcher
+	watcher boardWatcher
 	err     error
 }
 
@@ -62,9 +62,9 @@ func (a App) Init() tea.Cmd {
 
 func (a App) startWatching() tea.Cmd {
 	return func() tea.Msg {
-		w, err := newBoardWatcher(a.boardPath)
+		w, err := newLocalBoardWatcher(a.boardPath)
 		if err != nil {
-			return watcherStartedMsg{watcher: nil, err: err}
+			return watcherStartedMsg{err: err}
 		}
 		return watcherStartedMsg{watcher: w}
 	}
