@@ -292,12 +292,57 @@ func extractColumns(board *domain.Board) []string {
 }
 
 
+func (a *App) collapseDescription() {
+	a.descExpanded = ""
+	a.descScrollY = 0
+}
+
+// clampDescScroll ensures descScrollY doesn't exceed the maximum scroll offset
+// for the currently expanded description.
+func (a *App) clampDescScroll(maxLines int) {
+	if a.descExpanded == "" {
+		return
+	}
+	item := a.selectedItem()
+	if item == nil || item.Description == "" {
+		return
+	}
+	w := a.columnWidth()
+	contentW := w - 4
+	if contentW < 10 {
+		contentW = 10
+	}
+	// Count total wrapped lines (same logic as renderDescription)
+	paragraphs := strings.Split(item.Description, "\n")
+	totalLines := 0
+	for _, p := range paragraphs {
+		if p == "" {
+			totalLines++
+			continue
+		}
+		totalLines += len(wrapText(p, contentW))
+	}
+	maxScroll := totalLines - maxLines
+	if maxScroll < 0 {
+		maxScroll = 0
+	}
+	if a.descScrollY > maxScroll {
+		a.descScrollY = maxScroll
+	}
+}
+
 func (a App) handleBoardKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "q", "ctrl+c":
 		return a.quit()
+	case "esc":
+		if a.descExpanded != "" {
+			a.collapseDescription()
+			return a, nil // consume esc, don't propagate
+		}
 	case "h", "left":
 		if a.cursorCol > 0 {
+			a.collapseDescription()
 			a.cursorCol--
 			a.cursorRow = 0
 			a.clampCursor()
@@ -305,12 +350,14 @@ func (a App) handleBoardKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	case "l", "right":
 		if a.cursorCol < len(a.columns)-1 {
+			a.collapseDescription()
 			a.cursorCol++
 			a.cursorRow = 0
 			a.clampCursor()
 			a.scrollToSelected()
 		}
 	case "tab":
+		a.collapseDescription()
 		if len(a.columns) > 0 {
 			a.cursorCol = (a.cursorCol + 1) % len(a.columns)
 			a.cursorRow = 0
@@ -318,15 +365,38 @@ func (a App) handleBoardKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			a.scrollToSelected()
 		}
 	case "j", "down":
+		a.collapseDescription()
 		items := a.visibleItemsInColumn(a.cursorCol)
 		if a.cursorRow < len(items)-1 {
 			a.cursorRow++
 			a.scrollToSelected()
 		}
 	case "k", "up":
+		a.collapseDescription()
 		if a.cursorRow > 0 {
 			a.cursorRow--
 			a.scrollToSelected()
+		}
+	case "v":
+		if item := a.selectedItem(); item != nil && item.Description != "" {
+			if a.descExpanded == item.ID {
+				a.descExpanded = ""
+				a.descScrollY = 0
+			} else {
+				a.descExpanded = item.ID
+				a.descScrollY = 0
+			}
+		}
+	case "J":
+		if a.descExpanded != "" {
+			a.descScrollY++
+			a.clampDescScroll(5)
+		}
+	case "K":
+		if a.descExpanded != "" {
+			if a.descScrollY > 0 {
+				a.descScrollY--
+			}
 		}
 	case "enter":
 		if item := a.selectedItem(); item != nil {
