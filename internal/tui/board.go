@@ -181,6 +181,18 @@ func (a App) renderCard(item *domain.Item, selected bool) string {
 		lines = append(lines, strings.Join(metaParts, " "))
 	}
 
+	// Accordion indicator — only on selected card with non-empty description
+	if selected && item.Description != "" {
+		if a.descExpanded == item.ID {
+			lines = append(lines, descIndicatorStyle.Render("\u25bc description"))
+			sep := strings.Repeat("\u2500", contentW)
+			lines = append(lines, lipgloss.NewStyle().Faint(true).Render(sep))
+			lines = append(lines, a.renderDescription(item.Description, contentW, a.descScrollY, 5)...)
+		} else {
+			lines = append(lines, descIndicatorStyle.Render("\u25b6 description"))
+		}
+	}
+
 	content := strings.Join(lines, "\n")
 	if selected {
 		return selectedCardStyle.Width(w - 2).Render(content)
@@ -586,4 +598,75 @@ func wrapText(s string, maxWidth int) []string {
 	}
 	lines = append(lines, cur)
 	return lines
+}
+
+// renderDescription word-wraps and renders a description within a scrollable
+// viewport of maxLines content lines. Returns the rendered lines including
+// scroll indicators (outside the viewport — they don't consume content lines).
+func (a App) renderDescription(desc string, maxWidth int, scrollY int, maxLines int) []string {
+	if desc == "" {
+		return nil
+	}
+
+	// Split on newlines first, then wrap each paragraph
+	paragraphs := strings.Split(desc, "\n")
+	var allLines []string
+	for _, p := range paragraphs {
+		if p == "" {
+			allLines = append(allLines, "")
+			continue
+		}
+		wrapped := wrapText(p, maxWidth)
+		allLines = append(allLines, wrapped...)
+	}
+
+	totalLines := len(allLines)
+	if totalLines == 0 {
+		return nil
+	}
+
+	// No scrolling needed
+	if totalLines <= maxLines {
+		styled := make([]string, len(allLines))
+		for i, l := range allLines {
+			styled[i] = descStyle.Render(l)
+		}
+		return styled
+	}
+
+	// Clamp scrollY
+	maxScroll := totalLines - maxLines
+	if scrollY > maxScroll {
+		scrollY = maxScroll
+	}
+	if scrollY < 0 {
+		scrollY = 0
+	}
+
+	// Slice the viewport
+	end := scrollY + maxLines
+	if end > totalLines {
+		end = totalLines
+	}
+	visible := allLines[scrollY:end]
+
+	styled := make([]string, 0, len(visible)+2)
+
+	// Up indicator (outside viewport)
+	if scrollY > 0 {
+		hint := fmt.Sprintf("%*s", maxWidth, "\u25b4 J/K")
+		styled = append(styled, descScrollHint.Render(hint))
+	}
+
+	for _, l := range visible {
+		styled = append(styled, descStyle.Render(l))
+	}
+
+	// Down indicator (outside viewport)
+	if end < totalLines {
+		hint := fmt.Sprintf("%*s", maxWidth, "\u25be J/K")
+		styled = append(styled, descScrollHint.Render(hint))
+	}
+
+	return styled
 }

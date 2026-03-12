@@ -68,6 +68,11 @@ var (
 
 	// Cross-column badge appended to epic headers when epic lives elsewhere.
 	crossColBadge = lipgloss.NewStyle().Faint(true).Render(" ⇠")
+
+	// Description accordion
+	descIndicatorStyle = lipgloss.NewStyle().Faint(true)
+	descStyle          = lipgloss.NewStyle().Foreground(lipgloss.Color("242"))
+	descScrollHint     = lipgloss.NewStyle().Faint(true)
 )
 
 func priorityIndicator(pri string) string {

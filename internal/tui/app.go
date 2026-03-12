@@ -22,6 +22,10 @@ type App struct {
 	collapsed  map[string]bool
 	colScrollY map[int]int // per-column scroll offsets
 
+	// Description accordion
+	descExpanded string // item ID whose description is expanded, "" if none
+	descScrollY  int    // scroll offset within expanded description
+
 	// State machine
 	state     viewState
 	prevState viewState

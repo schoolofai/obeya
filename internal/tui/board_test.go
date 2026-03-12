@@ -85,3 +85,106 @@ func TestWrapText_TitleLikeString(t *testing.T) {
 		}
 	}
 }
+
+// --- renderDescription tests ---
+
+func TestRenderDescription_Short(t *testing.T) {
+	a := App{}
+	lines := a.renderDescription("Short desc", 20, 0, 5)
+	if len(lines) != 1 {
+		t.Errorf("expected 1 line, got %d: %v", len(lines), lines)
+	}
+}
+
+func TestRenderDescription_ExactlyMaxLines(t *testing.T) {
+	a := App{}
+	desc := "line one\nline two\nline three\nline four\nline five"
+	lines := a.renderDescription(desc, 40, 0, 5)
+	if len(lines) != 5 {
+		t.Errorf("expected 5 lines, got %d: %v", len(lines), lines)
+	}
+}
+
+func TestRenderDescription_OverMaxLines_ShowsScrollDown(t *testing.T) {
+	a := App{}
+	desc := "one\ntwo\nthree\nfour\nfive\nsix\nseven"
+	lines := a.renderDescription(desc, 40, 0, 5)
+	// 5 content lines + 1 scroll indicator
+	if len(lines) != 6 {
+		t.Errorf("expected 6 lines (5 content + 1 indicator), got %d: %v", len(lines), lines)
+	}
+	last := lines[len(lines)-1]
+	if !strings.Contains(last, "\u25be") { // ▾
+		t.Errorf("expected down scroll indicator, got: %q", last)
+	}
+}
+
+func TestRenderDescription_ScrolledMiddle_ShowsBothIndicators(t *testing.T) {
+	a := App{}
+	desc := "one\ntwo\nthree\nfour\nfive\nsix\nseven\neight"
+	lines := a.renderDescription(desc, 40, 2, 5)
+	// 1 up indicator + 5 content + 1 down indicator
+	if len(lines) != 7 {
+		t.Errorf("expected 7 lines, got %d: %v", len(lines), lines)
+	}
+	if !strings.Contains(lines[0], "\u25b4") { // ▴
+		t.Errorf("expected up scroll indicator on first line, got: %q", lines[0])
+	}
+	if !strings.Contains(lines[len(lines)-1], "\u25be") { // ▾
+		t.Errorf("expected down scroll indicator on last line, got: %q", lines[len(lines)-1])
+	}
+}
+
+func TestRenderDescription_ScrolledToEnd_ShowsUpOnly(t *testing.T) {
+	a := App{}
+	desc := "one\ntwo\nthree\nfour\nfive\nsix\nseven"
+	// 7 lines total, scrollY=2 means lines 2-6 visible (indices 2,3,4,5,6)
+	lines := a.renderDescription(desc, 40, 2, 5)
+	if !strings.Contains(lines[0], "\u25b4") { // ▴
+		t.Errorf("expected up indicator, got: %q", lines[0])
+	}
+	last := lines[len(lines)-1]
+	if strings.Contains(last, "\u25be") { // ▾
+		t.Errorf("should NOT have down indicator when scrolled to end, got: %q", last)
+	}
+}
+
+func TestRenderDescription_Empty(t *testing.T) {
+	a := App{}
+	lines := a.renderDescription("", 20, 0, 5)
+	if len(lines) != 0 {
+		t.Errorf("expected 0 lines for empty desc, got %d", len(lines))
+	}
+}
+
+func TestRenderDescription_WrapsLongLines(t *testing.T) {
+	a := App{}
+	desc := "This is a very long description line that should be wrapped to fit"
+	lines := a.renderDescription(desc, 15, 0, 5)
+	for i, line := range lines {
+		plain := stripAnsi(line)
+		if utf8.RuneCountInString(plain) > 15 {
+			t.Errorf("line %d exceeds maxWidth: %q (%d runes)", i, plain, utf8.RuneCountInString(plain))
+		}
+	}
+}
+
+// stripAnsi removes ANSI escape sequences for length testing.
+func stripAnsi(s string) string {
+	result := ""
+	inEsc := false
+	for _, r := range s {
+		if r == '\033' {
+			inEsc = true
+			continue
+		}
+		if inEsc {
+			if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') {
+				inEsc = false
+			}
+			continue
+		}
+		result += string(r)
+	}
+	return result
+}
