@@ -21,7 +21,12 @@ func getStore() store.Store {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
-	return store.NewJSONStore(root)
+	s, err := store.NewStore(root, "")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
+	return s
 }
 
 func getEngine() (*engine.Engine, error) {
@@ -33,7 +38,10 @@ func getEngine() (*engine.Engine, error) {
 	if err != nil {
 		return nil, err
 	}
-	s := store.NewJSONStore(root)
+	s, err := store.NewStore(root, "")
+	if err != nil {
+		return nil, err
+	}
 	if !s.BoardExists() {
 		return nil, fmt.Errorf("no board found — run 'ob init' first")
 	}
