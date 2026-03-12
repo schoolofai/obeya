@@ -140,39 +140,52 @@ func (a App) renderColumn(colIdx int, colName string) string {
 
 func (a App) renderCard(item *domain.Item, selected bool) string {
 	w := a.columnWidth()
-	titleMax := w - 6
-	if titleMax < 10 {
-		titleMax = 10
+	contentW := w - 4 // border(2) + padding(2)
+	if contentW < 10 {
+		contentW = 10
 	}
 
-	line1 := fmt.Sprintf("#%d %s", item.DisplayNum, truncate(item.Title, titleMax))
+	// Title: wrap instead of truncate
+	prefix := fmt.Sprintf("#%d ", item.DisplayNum)
+	titleMax := contentW - utf8.RuneCountInString(prefix)
+	if titleMax < 4 {
+		titleMax = 4
+	}
+	titleLines := wrapText(item.Title, titleMax)
+	line1 := prefix + titleLines[0]
+
+	lines := []string{line1}
+	indent := strings.Repeat(" ", utf8.RuneCountInString(prefix))
+	for _, tl := range titleLines[1:] {
+		lines = append(lines, indent+tl)
+	}
+
 	typLabel := typeStyle(string(item.Type)).Render(string(item.Type))
 	line2 := fmt.Sprintf("%s %s", typLabel, priorityIndicator(string(item.Priority)))
-
-	lines := []string{line1, line2}
+	lines = append(lines, line2)
 
 	badge := a.parentBadge(item)
 	if badge != "" {
 		lines = append(lines, badge)
 	}
 
-	var line4Parts []string
+	var metaParts []string
 	if item.Assignee != "" {
 		name := resolveUserName(a.board, item.Assignee)
-		line4Parts = append(line4Parts, assigneeStyle.Render("@"+name))
+		metaParts = append(metaParts, assigneeStyle.Render("@"+name))
 	}
 	if len(item.BlockedBy) > 0 {
-		line4Parts = append(line4Parts, blockedStyle.Render("[!]"))
+		metaParts = append(metaParts, blockedStyle.Render("[!]"))
 	}
-	if len(line4Parts) > 0 {
-		lines = append(lines, strings.Join(line4Parts, " "))
+	if len(metaParts) > 0 {
+		lines = append(lines, strings.Join(metaParts, " "))
 	}
 
 	content := strings.Join(lines, "\n")
 	if selected {
-		return selectedCardStyle.Render(content)
+		return selectedCardStyle.Width(w - 2).Render(content)
 	}
-	return cardStyle.Render(content)
+	return cardStyle.Width(w - 2).Render(content)
 }
 
 func (a App) renderGroupedCards(items []*domain.Item, colIdx int) []string {

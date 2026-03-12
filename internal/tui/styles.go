@@ -6,15 +6,13 @@ var (
 	// Card styles
 	cardStyle = lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
-			Padding(0, 1).
-			Width(22)
+			Padding(0, 1)
 
 	selectedCardStyle = lipgloss.NewStyle().
 				Border(lipgloss.ThickBorder()).
 				BorderForeground(lipgloss.Color("14")). // Bright cyan
 				Bold(true).
-				Padding(0, 1).
-				Width(22)
+				Padding(0, 1)
 
 	// Type colors
 	epicStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("5"))
