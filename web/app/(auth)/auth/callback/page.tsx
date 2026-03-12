@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-export default function CallbackPage() {
+function CallbackHandler() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -16,9 +16,15 @@ export default function CallbackPage() {
     router.replace("/dashboard");
   }, [router, searchParams]);
 
+  return <p className="text-sm text-gray-500">Completing sign in…</p>;
+}
+
+export default function CallbackPage() {
   return (
     <div className="flex h-screen items-center justify-center">
-      <p className="text-sm text-gray-500">Completing sign in…</p>
+      <Suspense fallback={<p className="text-sm text-gray-500">Loading…</p>}>
+        <CallbackHandler />
+      </Suspense>
     </div>
   );
 }

@@ -50,7 +50,7 @@ async function listUserBoards(userId: string) {
 
   const boardMap = new Map<string, Record<string, unknown>>();
   for (const doc of owned.documents) boardMap.set(doc.$id, doc);
-  for (const doc of memberBoards) boardMap.set(doc.$id, doc);
+  for (const doc of memberBoards) boardMap.set(doc.$id as string, doc);
 
   return Array.from(boardMap.values()).map(deserializeBoard);
 }

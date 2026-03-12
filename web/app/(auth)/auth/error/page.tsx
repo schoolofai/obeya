@@ -1,10 +1,11 @@
 "use client";
 
+import { Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 
-export default function AuthErrorPage() {
+function ErrorContent() {
   const searchParams = useSearchParams();
   const message =
     searchParams.get("message") ?? "An authentication error occurred";
@@ -24,6 +25,14 @@ export default function AuthErrorPage() {
         </Button>
       </Link>
     </div>
+  );
+}
+
+export default function AuthErrorPage() {
+  return (
+    <Suspense fallback={<p className="text-sm text-gray-500">Loading…</p>}>
+      <ErrorContent />
+    </Suspense>
   );
 }
 

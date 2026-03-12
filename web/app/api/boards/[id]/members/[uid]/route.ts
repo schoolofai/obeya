@@ -105,6 +105,6 @@ async function updateBoardMemberRole(
     env.APPWRITE_DATABASE_ID,
     COLLECTIONS.BOARD_MEMBERS,
     membershipId,
-    { role }
+    { role } as unknown as Record<string, unknown>
   );
 }
