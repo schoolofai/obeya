@@ -105,6 +105,11 @@ Collections mirror the local `board.json` schema exactly — cloud is a differen
 | org_id          | string?  | Null = personal board          |
 | display_counter | integer  | Next #N number                 |
 | columns         | string   | JSON array: [{name, limit}]    |
+| display_map     | string   | JSON object: {num: id} mapping |
+| users           | string   | JSON object: identity registry |
+| projects        | string   | JSON object: linked projects   |
+| agent_role      | string   | Default role for AI agents     |
+| version         | integer  | Schema version (currently 1)   |
 | created_at      | datetime |                                |
 | updated_at      | datetime |                                |
 
@@ -119,10 +124,11 @@ Collections mirror the local `board.json` schema exactly — cloud is a differen
 | title       | string   |                                |
 | description | string   |                                |
 | status      | string   | Column name                    |
-| priority    | enum     | low \| medium \| high \| urgent |
+| priority    | enum     | low \| medium \| high \| critical |
 | parent_id   | string?  | FK → items (self-ref)          |
 | assignee_id | string?  | FK → users                     |
 | blocked_by  | string[] | IDs of blocking items          |
+| tags        | string[] | Freeform tags                  |
 | project     | string?  | Project name tag               |
 | created_at  | datetime |                                |
 | updated_at  | datetime |                                |
@@ -136,7 +142,7 @@ Collections mirror the local `board.json` schema exactly — cloud is a differen
 | board_id   | string   | FK → boards                    |
 | user_id    | string   | Who did it                     |
 | session_id | string   | CLI session / web              |
-| action     | string   | created \| moved \| edited     |
+| action     | string   | created \| moved \| edited \| assigned \| blocked \| unblocked |
 | detail     | string   | "status: todo → done"          |
 | timestamp  | datetime |                                |
 
@@ -148,7 +154,7 @@ Separate collection (not embedded in items) for efficient activity feed queries.
 |--------------|----------|--------------------------------|
 | $id          | auto     |                                |
 | board_id     | string   | FK → boards                    |
-| display_num  | integer  | Shares counter with items      |
+| display_num  | integer  | Shares counter with items (see Display Counter Concurrency below) |
 | title        | string   |                                |
 | source_path  | string   | Original file path             |
 | content      | string   | Plan markdown body             |
@@ -200,6 +206,26 @@ Separate collection (not embedded in items) for efficient activity feed queries.
 | expires_at   | datetime? |                               |
 
 CLI stores the raw token in `~/.obeya/credentials.json` (never committed). Server stores only the bcrypt hash.
+
+### Display Counter Concurrency
+
+The local board uses a single `next_display` counter for both items and plans. In the cloud, concurrent creates could race. The API route for creating items/plans must:
+
+1. Read the board's `display_counter` value
+2. Atomically increment it via Appwrite's `updateDocument` (Appwrite uses optimistic locking — if another write happened, it returns a conflict error)
+3. On conflict, retry with fresh counter value (max 3 retries, then error `COUNTER_CONFLICT`)
+
+This ensures no duplicate display numbers. The counter lives on the `boards` document and is the single source of truth.
+
+### Appwrite Document Permissions
+
+Every document must have read/write permissions set correctly for realtime to work:
+
+- **Items, item_history, plans:** Read permission includes all board members + all org members (if org board). Write permission includes board editors/owners + org admins/owners.
+- **When a member is added** to a board or org: An Appwrite Function (triggered by the membership document create) batch-updates permissions on all existing documents for that board. This is an async background operation.
+- **When a member is removed:** Same — batch-revoke permissions via Appwrite Function.
+
+This ensures Appwrite's realtime only pushes events to authorized users.
 
 ### Local → Cloud Migration
 
@@ -334,7 +360,7 @@ DELETE /api/orgs/:id/members/:uid     Remove member
 
 | Client | Flow |
 |--------|------|
-| Web UI | Appwrite OAuth (GitHub/Google) → session cookie → API routes verify session via Appwrite Server SDK |
+| Web UI | Appwrite Auth (email/password via Appwrite's email provider, or OAuth via GitHub/Google) → session cookie → API routes verify session via Appwrite Server SDK |
 | CLI    | `ob login` → opens browser to OAuth flow → on success, API creates api_token → CLI stores token in `~/.obeya/credentials.json` → all requests include `Authorization: Bearer <token>` |
 
 ### API Route Auth Middleware
@@ -425,7 +451,9 @@ $ ob login
 ```
 1. Is user an org member? → gets org role on ALL org boards
 2. Is user a board member? → gets board-specific role
-3. Neither? → 403 Forbidden
+3. If user has BOTH org and board roles → use the HIGHER permission level
+   (e.g., org admin + board viewer → admin wins)
+4. Neither? → 403 Forbidden
 ```
 
 ### Free Tier Limits
@@ -456,11 +484,12 @@ ob <command>
 
 ### New CLI Commands
 
-| Command          | Description                          |
-|------------------|--------------------------------------|
-| `ob init --cloud` | Create cloud board or migrate local  |
-| `ob login`        | OAuth via browser → store API token  |
-| `ob logout`       | Clear stored credentials             |
+| Command          | Description                                    |
+|------------------|------------------------------------------------|
+| `ob init --cloud` | Create cloud board or migrate local             |
+| `ob init --local` | Switch from cloud mode back to local board      |
+| `ob login`        | OAuth via browser → store API token             |
+| `ob logout`       | Clear stored credentials                        |
 
 All existing commands (`ob list`, `ob move`, `ob show`, etc.) work unchanged — they use the cloud backend transparently.
 
@@ -518,27 +547,64 @@ Scenario 3: Already cloud (.obeya/cloud.json exists)
 
 ### Go CLI Architecture Change
 
+The existing CLI uses a transaction-based `Store` interface:
+
 ```go
-// store/backend.go — new interface
-type Backend interface {
-    GetBoard() (*Board, error)
-    ListItems(filter ItemFilter) ([]Item, error)
-    GetItem(id string) (*Item, error)
-    CreateItem(item *Item) (*Item, error)
-    UpdateItem(id string, updates ItemUpdates) (*Item, error)
-    MoveItem(id string, status string) (*Item, error)
-    DeleteItem(id string) error
-    // ... mirrors current store functions
+// internal/store/store.go — EXISTING interface (unchanged)
+type Store interface {
+    Transaction(fn func(board *domain.Board) error) error
+    LoadBoard() (*domain.Board, error)
+    InitBoard(name string, columns []string) error
+    BoardExists() bool
+    BoardFilePath() string
 }
-
-// store/local.go — existing behavior, unchanged
-type LocalBackend struct { boardPath string }
-
-// store/cloud.go — new HTTP client backend
-type CloudBackend struct { apiURL string; token string; boardID string }
 ```
 
-Commands in `cmd/` call `store.GetBackend()` which returns `LocalBackend` or `CloudBackend` based on `.obeya/cloud.json` presence. Zero changes to command layer.
+The `CloudStore` implements the same `Store` interface. This preserves the existing Engine and command layers without modification.
+
+```go
+// internal/store/local.go — existing FileStore (unchanged)
+type FileStore struct { boardPath string; mu sync.Mutex }
+
+// internal/store/cloud.go — new CloudStore
+type CloudStore struct {
+    apiURL  string
+    token   string
+    boardID string
+}
+
+func (c *CloudStore) Transaction(fn func(board *domain.Board) error) error {
+    // 1. GET /api/boards/:id/export → full board as domain.Board
+    // 2. Apply fn(board) locally
+    // 3. Diff the before/after board state
+    // 4. Send granular API calls for each change (create/move/edit/delete items)
+    // Error on any API call → return error (no silent failures)
+}
+
+func (c *CloudStore) LoadBoard() (*domain.Board, error) {
+    // GET /api/boards/:id/export → deserialize as domain.Board
+}
+
+func (c *CloudStore) BoardExists() bool { return true } // cloud board always exists if cloud.json present
+
+func (c *CloudStore) BoardFilePath() string { return "" } // Not applicable in cloud mode — TUI uses WebSocket instead of fsnotify
+```
+
+The `Transaction` implementation uses a diff-and-sync strategy: fetch the full board, let the existing Engine mutate it in-memory, then detect what changed and send targeted API calls. This preserves the atomic read-modify-write semantics while translating to individual HTTP operations.
+
+The Engine and command layers (`cmd/*`, `internal/engine/*`) require **zero changes** — they call `store.Transaction()` the same way regardless of backend.
+
+```go
+// internal/store/resolve.go — backend selection
+func NewStore() (Store, error) {
+    if cloudConfigExists(".obeya/cloud.json") {
+        cfg := loadCloudConfig(".obeya/cloud.json")
+        creds := loadCredentials("~/.obeya/credentials.json")
+        return &CloudStore{apiURL: cfg.APIURL, token: creds.Token, boardID: cfg.BoardID}, nil
+    }
+    return NewFileStore()
+}
+```
 
 ---
 
@@ -678,6 +744,8 @@ The main workspace — mirrors the TUI board view:
 ---
 
 ## Project Structure
+
+The cloud app lives in a **separate repository** (`obeya-cloud`), independent of the Go CLI repo (`obeya`). The Go CLI changes (CloudStore, cloud.json support) are made in the existing `obeya` repo. The two repos share no code — they communicate via the REST API.
 
 ```
 obeya-cloud/
