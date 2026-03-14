@@ -112,6 +112,35 @@ describe("POST /api/auth/signup", () => {
     expect(cookie).toContain("obeya_session=user-123");
     expect(cookie).toContain("HttpOnly");
     expect(cookie).toContain("Path=/");
+    expect(cookie).toContain("SameSite=lax");
+  });
+
+  it("returns 500 when session creation fails after user is created", async () => {
+    mockCreate.mockResolvedValue({
+      $id: "user-123",
+      email: "alice@example.com",
+      name: "Alice",
+    });
+
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 429,
+      json: async () => ({ message: "Rate limited" }),
+    });
+
+    const req = jsonRequest({
+      email: "alice@example.com",
+      password: "securepass123",
+      name: "Alice",
+    });
+
+    const res = await POST(req);
+    const body = await res.json();
+
+    expect(res.status).toBe(500);
+    expect(body.ok).toBe(false);
+    expect(body.error.code).toBe(ErrorCode.INTERNAL_ERROR);
+    expect(body.error.message).toBe("Rate limited");
   });
 
   it("calls Appwrite session endpoint with correct parameters", async () => {
