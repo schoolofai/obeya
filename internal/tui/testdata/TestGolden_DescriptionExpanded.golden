@@ -1,0 +1,40 @@
+  Obeya Board: test-board
+╭─────────────────────╮ ╭─────────────────────╮ ╭─────────────────────╮ ╭─────────────────────╮ ╭─────────────────────╮ 
+│BACKLOG (2)          │ │TODO (1)             │ │IN-PROGRESS (1)      │ │REVIEW (1)           │ │DONE (1)             │ 
+│┏━━━━━━━━━━━━━━━━━━━┓│ │╭───────────────────╮│ │╭───────────────────╮│ │╭───────────────────╮│ │╭───────────────────╮│ 
+│┃ #2 Add token      ┃│ ││ #3 Another task   ││ ││ #4 Implement the  ││ ││ #5 Fix bug in     ││ ││ #6 Done task      ││ 
+│┃    refresh        ┃│ ││    in todo column ││ ││    full           ││ ││    review         ││ ││ task ●            ││ 
+│┃    handling for   ┃│ ││ task ●            ││ ││    end-to-end     ││ ││ task ●●           ││ │╰───────────────────╯│ 
+│┃    expired        ┃│ │╰───────────────────╯│ ││    integration    ││ │╰───────────────────╯│ │                     │ 
+│┃    sessions with  ┃│ │                     │ ││    test suite for ││ │                     │ │                     │ 
+│┃    automatic      ┃│ │                     │ ││    cloud          ││ │                     │ │                     │ 
+│┃    retry logic    ┃│ │                     │ ││    synchronizatio ││ │                     │ │                     │ 
+│┃ story ●●          ┃│ │                     │ ││    n with         ││ │                     │ │                     │ 
+│┃ ▼ description     ┃│ │                     │ ││    real-time      ││ │                     │ │                     │ 
+│┃ ───────────────── ┃│ │                     │ ││    WebSocket      ││ │                     │ │                     │ 
+│┃ Handle JWT token  ┃│ │                     │ ││    events         ││ │                     │ │                     │ 
+│┃ expiry by auto    ┃│ │                     │ ││ task ●●●          ││ │                     │ │                     │ 
+│┃ refresh. When a   ┃│ │                     │ │╰───────────────────╯│ │                     │ │                     │ 
+│┃ 401 is received,  ┃│ │                     │ │                     │ │                     │ │                     │ 
+│┃ attempt to        ┃│ │                     │ │                     │ │                     │ │                     │ 
+│┃             ▾ J/K ┃│ │                     │ │                     │ │                     │ │                     │ 
+│┗━━━━━━━━━━━━━━━━━━━┛│ │                     │ │                     │ │                     │ │                     │ 
+│╭───────────────────╮│ │                     │ │                     │ │                     │ │                     │ 
+││ #1 Short task     ││ │                     │ │                     │ │                     │ │                     │ 
+││ task ●●           ││ │                     │ │                     │ │                     │ │                     │ 
+│╰───────────────────╯│ │                     │ │                     │ │                     │ │                     │ 
+│                     │ │                     │ │                     │ │                     │ │                     │ 
+│                     │ │                     │ │                     │ │                     │ │                     │ 
+│                     │ │                     │ │                     │ │                     │ │                     │ 
+│                     │ │                     │ │                     │ │                     │ │                     │ 
+│                     │ │                     │ │                     │ │                     │ │                     │ 
+│                     │ │                     │ │                     │ │                     │ │                     │ 
+│                     │ │                     │ │                     │ │                     │ │                     │ 
+│                     │ │                     │ │                     │ │                     │ │                     │ 
+│                     │ │                     │ │                     │ │                     │ │                     │ 
+│                     │ │                     │ │                     │ │                     │ │                     │ 
+│                     │ │                     │ │                     │ │                     │ │                     │ 
+│                     │ │                     │ │                     │ │                     │ │                     │ 
+│                     │ │                     │ │                     │ │                     │ │                     │ 
+╰─────────────────────╯ ╰─────────────────────╯ ╰─────────────────────╯ ╰─────────────────────╯ ╰─────────────────────╯ 
+  h/l:columns  j/k:items  v:desc  m:move  a:assign  c:create  d:delete  p:priority  Enter:detail  Space:collapse  /:search  r:reload  q:quit
