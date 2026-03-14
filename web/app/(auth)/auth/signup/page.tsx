@@ -20,7 +20,7 @@ export default function SignupPage() {
     setError(null);
     setLoading(true);
     try {
-      await apiClient.post("/api/auth/register", { name, email, password });
+      await apiClient.post("/api/auth/signup", { name, email, password });
       router.replace("/dashboard");
     } catch (err) {
       const message =
