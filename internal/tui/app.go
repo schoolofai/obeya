@@ -624,16 +624,36 @@ func (a App) executeInput(value string) (tea.Model, tea.Cmd) {
 	ctx := a.input.context
 	switch ctx {
 	case "epic", "story", "task":
+		assignee := a.firstRegisteredUser()
+		if assignee == "" {
+			a.err = fmt.Errorf("no registered users — register one with 'ob user add' then retry, or use CLI: ob create %s %q --assign <user>", ctx, value)
+			a.state = stateBoard
+			return a, nil
+		}
 		parentRef := ""
 		if ctx != "epic" {
 			if item := a.selectedItem(); item != nil {
 				parentRef = item.ID
 			}
 		}
-		_, _ = a.engine.CreateItem(ctx, value, parentRef, "", "medium", "", nil)
+		if _, err := a.engine.CreateItem(ctx, value, parentRef, "", "medium", assignee, nil); err != nil {
+			a.err = fmt.Errorf("create failed: %w", err)
+			a.state = stateBoard
+			return a, nil
+		}
 	}
 	a.state = stateBoard
 	return a, a.loadBoard()
+}
+
+func (a App) firstRegisteredUser() string {
+	if a.board == nil || len(a.board.Users) == 0 {
+		return ""
+	}
+	for id := range a.board.Users {
+		return id
+	}
+	return ""
 }
 
 func (a App) handleConfirmKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
