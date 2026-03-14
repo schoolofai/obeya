@@ -4,8 +4,8 @@
       "command": "npx",
       "args": ["-y", "@appwrite/mcp"],
       "env": {
-        "APPWRITE_API_KEY": "",
-        "APPWRITE_PROJECT_ID": "",
+        "APPWRITE_API_KEY": "standard_037d12fa61a503bf8df49d8aa19ee526ee1e6f7313bdb5dfe04cbe9558095c2ccaefcf433b7316f63e996bedcef8a921d4465a62398320a07276e39dfcf5dac9c375bd655cbff66b45c4d80daffd646d05580d30f9116a83932984f553b171409ec049383b456340e0cdcfd1a295c84dff92793eefd52c21a9b806dde52595eb",
+        "APPWRITE_PROJECT_ID": "69b2c740003cbab398cc",
         "APPWRITE_ENDPOINT": "https://cloud.appwrite.io/v1"
       }
     }

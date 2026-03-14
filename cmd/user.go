@@ -47,7 +47,20 @@ func init() {
 	rootCmd.AddCommand(userCmd)
 }
 
+var supportedProviders = map[string]bool{
+	"local":      true,
+	"claude-code": true,
+}
+
 func runUserAdd(cmd *cobra.Command, args []string) {
+	if !supportedProviders[flagUserProvider] {
+		fmt.Fprintf(os.Stderr, "Error: unsupported provider %q.\n\n"+
+			"Only Claude Code is currently supported as an agent provider.\n"+
+			"Supported providers: local (human), claude-code (agent)\n\n"+
+			"Other agent providers are planned but not yet available.\n", flagUserProvider)
+		os.Exit(1)
+	}
+
 	eng, err := getEngine()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)

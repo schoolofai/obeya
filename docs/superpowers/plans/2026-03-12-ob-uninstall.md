@@ -289,27 +289,28 @@ git commit -m "feat: add UninstallPlugin for removing claude plugin and marketpl
 In `cmd/skill.go`, make these exact changes:
 
 ```go
-// Line 37-41: Export the struct
+// Line 37-42: Export the struct (note: includes Supported field added in v2.0)
 type ProviderInfo struct {
 	Name      string
 	ConfigDir string
 	SkillFile string
+	Supported bool
 }
 
-// Line 43: Export the function, update return type
+// Line 44: Export the function, update return type
 func GetProviders() []ProviderInfo {
 
-// Line 49-53: Update struct literals
+// Line 50-54: Update struct literals
 return []ProviderInfo{
-	{Name: "claude-code", ConfigDir: filepath.Join(home, ".claude"), SkillFile: "obeya.md"},
-	{Name: "opencode", ConfigDir: filepath.Join(home, ".opencode"), SkillFile: "obeya.md"},
-	{Name: "codex", ConfigDir: filepath.Join(home, ".codex"), SkillFile: "obeya.md"},
+	{Name: "claude-code", ConfigDir: filepath.Join(home, ".claude"), SkillFile: "obeya.md", Supported: true},
+	{Name: "opencode", ConfigDir: filepath.Join(home, ".opencode"), SkillFile: "obeya.md", Supported: false},
+	{Name: "codex", ConfigDir: filepath.Join(home, ".codex"), SkillFile: "obeya.md", Supported: false},
 }
 
-// Line 58: Update call site in runSkillInstall
+// Line 59: Update call site in runSkillInstall
 providers := GetProviders()
 
-// Line 95: Update filterProviders signature
+// Line 101: Update filterProviders signature
 func filterProviders(providers []ProviderInfo, name string) []ProviderInfo {
 	for _, p := range providers {
 		if p.Name == name {
@@ -317,10 +318,10 @@ func filterProviders(providers []ProviderInfo, name string) []ProviderInfo {
 		}
 	}
 
-// Line 106: Update installSkillForProvider signature
+// Line 113: Update installSkillForProvider signature
 func installSkillForProvider(p ProviderInfo, content []byte) error {
 
-// Line 118: Update call site in runSkillList
+// Line 125: Update call site in runSkillList
 providers := GetProviders()
 ```
 
@@ -565,8 +566,8 @@ func printPreview(ctx *uninstallContext) {
 	fmt.Println()
 
 	fmt.Println("  PRESERVED (not touched)")
-	fmt.Println("  ├── .obeya/          (board data)")
-	fmt.Println("  ├── ~/.obeya/        (shared boards)")
+	fmt.Println("  ├── .obeya/          (board data, cloud config)")
+	fmt.Println("  ├── ~/.obeya/        (shared boards, credentials)")
 	fmt.Println("  └── .obeya-link      (board links)")
 	fmt.Println()
 }
@@ -617,7 +618,7 @@ func printBanner() {
 	fmt.Println("│                                                       │")
 	fmt.Println("│    brew uninstall obeya                               │")
 	fmt.Println("│                                                       │")
-	fmt.Println("│  Board data in .obeya/ directories was preserved.     │")
+	fmt.Println("│  Board data and cloud config were preserved.           │")
 	fmt.Println("│  Delete them manually if no longer needed.            │")
 	fmt.Println("│                                                       │")
 	fmt.Println("└───────────────────────────────────────────────────────┘")

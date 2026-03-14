@@ -1,5 +1,7 @@
 # Obeya
 
+> **Agent support:** Only **Claude Code** is currently supported as an AI agent. Other agents (Cursor, Windsurf, Copilot, etc.) are planned but not yet available.
+
 CLI Kanban board for humans and AI agents.
 
 Obeya (`ob`) is a lightweight, file-based task tracker that lives in your project directory. It works standalone from the terminal and integrates with AI coding assistants like Claude Code via the included plugin.

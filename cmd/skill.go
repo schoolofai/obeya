@@ -38,6 +38,7 @@ type providerInfo struct {
 	Name      string
 	ConfigDir string
 	SkillFile string
+	Supported bool
 }
 
 func getProviders() []providerInfo {
@@ -47,9 +48,9 @@ func getProviders() []providerInfo {
 		os.Exit(1)
 	}
 	return []providerInfo{
-		{Name: "claude-code", ConfigDir: filepath.Join(home, ".claude"), SkillFile: "obeya.md"},
-		{Name: "opencode", ConfigDir: filepath.Join(home, ".opencode"), SkillFile: "obeya.md"},
-		{Name: "codex", ConfigDir: filepath.Join(home, ".codex"), SkillFile: "obeya.md"},
+		{Name: "claude-code", ConfigDir: filepath.Join(home, ".claude"), SkillFile: "obeya.md", Supported: true},
+		{Name: "opencode", ConfigDir: filepath.Join(home, ".opencode"), SkillFile: "obeya.md", Supported: false},
+		{Name: "codex", ConfigDir: filepath.Join(home, ".codex"), SkillFile: "obeya.md", Supported: false},
 	}
 }
 
@@ -63,6 +64,11 @@ func runSkillInstall(cmd *cobra.Command, args []string) {
 
 	installed := 0
 	for _, p := range providers {
+		if !p.Supported {
+			fmt.Fprintf(os.Stderr, "Error: provider %q is not yet supported.\n\n"+
+				"Only 'claude-code' is currently supported. Run: ob skill install --provider claude-code\n", p.Name)
+			os.Exit(1)
+		}
 		if err := installSkillForProvider(p, skillSource); err != nil {
 			fmt.Fprintf(os.Stderr, "Error installing for %s: %v\n", p.Name, err)
 			os.Exit(1)
@@ -98,7 +104,8 @@ func filterProviders(providers []providerInfo, name string) []providerInfo {
 			return []providerInfo{p}
 		}
 	}
-	fmt.Fprintf(os.Stderr, "Error: unknown provider %q\n", name)
+	fmt.Fprintf(os.Stderr, "Error: unknown provider %q.\n\n"+
+		"Only 'claude-code' is currently supported. Run: ob skill install --provider claude-code\n", name)
 	os.Exit(1)
 	return nil
 }
@@ -116,12 +123,17 @@ func installSkillForProvider(p providerInfo, content []byte) error {
 
 func runSkillList(cmd *cobra.Command, args []string) {
 	providers := getProviders()
+	fmt.Printf("%-15s %-15s %s\n", "PROVIDER", "SUPPORTED", "STATUS")
 	for _, p := range providers {
+		supported := "yes"
+		if !p.Supported {
+			supported = "not yet"
+		}
 		dest := filepath.Join(p.ConfigDir, p.SkillFile)
 		status := "not installed"
 		if _, err := os.Stat(dest); err == nil {
 			status = "installed"
 		}
-		fmt.Printf("%-15s %s\n", p.Name, status)
+		fmt.Printf("%-15s %-15s %s\n", p.Name, supported, status)
 	}
 }
