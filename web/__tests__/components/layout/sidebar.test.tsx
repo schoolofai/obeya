@@ -4,6 +4,7 @@ import { Sidebar } from "@/components/layout/sidebar";
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/dashboard",
+  useRouter: () => ({ replace: vi.fn() }),
 }));
 
 vi.mock("next/link", () => ({
@@ -15,9 +16,9 @@ vi.mock("next/link", () => ({
 }));
 
 describe("Sidebar", () => {
-  it("renders Obeya logo/brand", () => {
+  it("renders obeya brand text", () => {
     render(<Sidebar />);
-    expect(screen.getByText("Obeya")).toBeInTheDocument();
+    expect(screen.getByText("obeya")).toBeInTheDocument();
   });
 
   it("renders Dashboard link", () => {
@@ -45,6 +46,16 @@ describe("Sidebar", () => {
   it("marks active link for current pathname", () => {
     render(<Sidebar />);
     const dashboardLink = screen.getByRole("link", { name: /dashboard/i });
-    expect(dashboardLink).toHaveClass("bg-gray-100");
+    expect(dashboardLink).toHaveClass("bg-[#21262d]");
+  });
+
+  it("renders pixel logo", () => {
+    render(<Sidebar />);
+    expect(screen.getByRole("img", { name: /kanban board logo/i })).toBeInTheDocument();
+  });
+
+  it("renders logout button", () => {
+    render(<Sidebar />);
+    expect(screen.getByRole("button", { name: /logout/i })).toBeInTheDocument();
   });
 });
