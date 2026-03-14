@@ -62,7 +62,7 @@ Run 'ob user list' to see registered users.
 
 The `--assign` value must resolve to a registered board user via `board.ResolveUserID()`. If the user does not exist, hard fail with an error listing registered users. This matches the existing behavior of `ob assign` and prevents storing dangling references.
 
-**Pseudocode:**
+**Pseudocode (cmd layer — empty check):**
 
 ```go
 func runCreate(cmd *cobra.Command, args []string) {
@@ -70,9 +70,27 @@ func runCreate(cmd *cobra.Command, args []string) {
         fmt.Fprintf(os.Stderr, mandatoryAssignError)
         os.Exit(1)
     }
-    // engine.CreateItem must resolve assignee via board.ResolveUserID()
-    // and return an error if the user is not registered.
-    // ... existing create logic
+    // ... pass createAssign to engine.CreateItem
+}
+```
+
+**Pseudocode (engine layer — user resolution inside transaction):**
+
+```go
+func (e *Engine) CreateItem(itemType, title, desc, assignee string, ...) (*domain.Item, error) {
+    var created *domain.Item
+    err := e.store.Transaction(func(board *domain.Board) error {
+        // Resolve assignee to registered user — fails if not found
+        assigneeID, err := board.ResolveUserID(assignee)
+        if err != nil {
+            return fmt.Errorf("unknown assignee %q: %w\nRun 'ob user list' to see registered users", assignee, err)
+        }
+        item := buildItem(board, itemType, title, desc, assigneeID, ...)
+        board.Items[item.ID] = item
+        created = item
+        return nil
+    })
+    return created, err
 }
 ```
 
@@ -352,9 +370,9 @@ Existing boards will have items without assignees. These are handled by:
 | `internal/tui/styles.go` | `unassignedStyle` definition |
 | `internal/tui/card_test.go` | Tests for unassigned rendering |
 | `skill/obeya.md` | Remove all `OB_USER` / `$OB_USER` references |
-| Skills: ob-create | Mandatory `--assign` instructions, remove `OB_USER` |
-| Skills: ob-subtask | Mandatory `--assign` with explicit parent-assignee lookup |
-| Skills: ob-pick | Assign-then-move flow, remove `OB_USER` |
-| Skills: ob-status | Drop `OB_USER` detection, use `--as` for identity |
-| Skills: ob-done | Drop `OB_USER` reference |
-| Skills: ob-show | Display `unassigned` label |
+| `obeya-plugin/skills/ob-create/SKILL.md` | Mandatory `--assign` instructions, remove `OB_USER` |
+| `obeya-plugin/skills/ob-subtask/SKILL.md` | Mandatory `--assign` with explicit parent-assignee lookup |
+| `obeya-plugin/skills/ob-pick/SKILL.md` | Assign-then-move flow, remove `OB_USER` |
+| `obeya-plugin/skills/ob-status/SKILL.md` | Drop `OB_USER` detection, use `--as` for identity |
+| `obeya-plugin/skills/ob-done/SKILL.md` | Drop `OB_USER` reference |
+| `obeya-plugin/skills/ob-show/SKILL.md` | Display `unassigned` label |
