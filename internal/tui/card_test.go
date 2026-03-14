@@ -4,6 +4,8 @@ import (
 	"strings"
 	"testing"
 	"unicode/utf8"
+
+	"github.com/niladribose/obeya/internal/domain"
 )
 
 func TestWrapText_ShortString(t *testing.T) {
@@ -187,4 +189,86 @@ func stripAnsi(s string) string {
 		result += string(r)
 	}
 	return result
+}
+
+// --- renderCard assignee badge tests ---
+
+func newTestApp(items map[string]*domain.Item, users map[string]*domain.Identity) App {
+	board := &domain.Board{
+		Items: items,
+		Users: users,
+	}
+	return App{board: board}
+}
+
+func TestRenderCard_UnassignedBadge(t *testing.T) {
+	item := &domain.Item{
+		ID:         "t1",
+		DisplayNum: 1,
+		Title:      "Fix login bug",
+		Type:       domain.ItemTypeTask,
+		Priority:   domain.PriorityMedium,
+	}
+	a := newTestApp(
+		map[string]*domain.Item{"t1": item},
+		map[string]*domain.Identity{},
+	)
+
+	card := a.renderCard(item, false)
+	plain := stripAnsi(card)
+	if !strings.Contains(plain, "@unassigned") {
+		t.Errorf("expected @unassigned badge, got:\n%s", plain)
+	}
+}
+
+func TestRenderCard_AssignedBadge(t *testing.T) {
+	item := &domain.Item{
+		ID:         "t2",
+		DisplayNum: 2,
+		Title:      "Add tests",
+		Type:       domain.ItemTypeTask,
+		Priority:   domain.PriorityHigh,
+		Assignee:   "user-1",
+	}
+	a := newTestApp(
+		map[string]*domain.Item{"t2": item},
+		map[string]*domain.Identity{
+			"user-1": {ID: "user-1", Name: "alice"},
+		},
+	)
+
+	card := a.renderCard(item, false)
+	plain := stripAnsi(card)
+	if !strings.Contains(plain, "@alice") {
+		t.Errorf("expected @alice badge, got:\n%s", plain)
+	}
+	if strings.Contains(plain, "@unassigned") {
+		t.Errorf("should not show @unassigned when assigned, got:\n%s", plain)
+	}
+}
+
+func TestRenderCard_UnassignedNotShownWhenAssigned(t *testing.T) {
+	item := &domain.Item{
+		ID:         "t3",
+		DisplayNum: 3,
+		Title:      "Deploy service",
+		Type:       domain.ItemTypeStory,
+		Priority:   domain.PriorityLow,
+		Assignee:   "user-2",
+	}
+	a := newTestApp(
+		map[string]*domain.Item{"t3": item},
+		map[string]*domain.Identity{
+			"user-2": {ID: "user-2", Name: "bob"},
+		},
+	)
+
+	card := a.renderCard(item, false)
+	plain := stripAnsi(card)
+	if strings.Contains(plain, "@unassigned") {
+		t.Errorf("@unassigned should not appear on assigned card, got:\n%s", plain)
+	}
+	if !strings.Contains(plain, "@bob") {
+		t.Errorf("expected @bob, got:\n%s", plain)
+	}
 }

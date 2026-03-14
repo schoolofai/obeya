@@ -26,8 +26,9 @@ var (
 	priLow      = lipgloss.NewStyle().Foreground(lipgloss.Color("2")).Render("\u25cf")
 
 	// Status
-	blockedStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("1")).Bold(true)
-	assigneeStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("6")).Faint(true)
+	blockedStyle      = lipgloss.NewStyle().Foreground(lipgloss.Color("1")).Bold(true)
+	assigneeStyle     = lipgloss.NewStyle().Foreground(lipgloss.Color("6")).Faint(true)
+	unassignedStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("1")).Faint(true)
 
 	// Column headers
 	activeColHeader   = lipgloss.NewStyle().Bold(true).Underline(true)

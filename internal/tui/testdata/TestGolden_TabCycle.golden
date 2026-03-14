@@ -4,20 +4,20 @@
 │┏━━━━━━━━━━━━━━━━━━━┓│ │╭───────────────────╮│ │╭───────────────────╮│ │╭───────────────────╮│ │╭───────────────────╮│ 
 │┃ #2 Add token      ┃│ ││ #3 Another task   ││ ││ #4 Implement the  ││ ││ #5 Fix bug in     ││ ││ #6 Done task      ││ 
 │┃    refresh        ┃│ ││    in todo column ││ ││    full           ││ ││    review         ││ ││ task ●            ││ 
-│┃    handling for   ┃│ ││ task ●            ││ ││    end-to-end     ││ ││ task ●●           ││ │╰───────────────────╯│ 
-│┃    expired        ┃│ │╰───────────────────╯│ ││    integration    ││ │╰───────────────────╯│ │                     │ 
-│┃    sessions with  ┃│ │                     │ ││    test suite for ││ │                     │ │                     │ 
+│┃    handling for   ┃│ ││ task ●            ││ ││    end-to-end     ││ ││ task ●●           ││ ││ @unassigned       ││ 
+│┃    expired        ┃│ ││ @unassigned       ││ ││    integration    ││ ││ @unassigned       ││ │╰───────────────────╯│ 
+│┃    sessions with  ┃│ │╰───────────────────╯│ ││    test suite for ││ │╰───────────────────╯│ │                     │ 
 │┃    automatic      ┃│ │                     │ ││    cloud          ││ │                     │ │                     │ 
 │┃    retry logic    ┃│ │                     │ ││    synchronizatio ││ │                     │ │                     │ 
 │┃ story ●●          ┃│ │                     │ ││    n with         ││ │                     │ │                     │ 
-│┃ ▶ description     ┃│ │                     │ ││    real-time      ││ │                     │ │                     │ 
-│┗━━━━━━━━━━━━━━━━━━━┛│ │                     │ ││    WebSocket      ││ │                     │ │                     │ 
-│╭───────────────────╮│ │                     │ ││    events         ││ │                     │ │                     │ 
-││ #1 Short task     ││ │                     │ ││ task ●●●          ││ │                     │ │                     │ 
+│┃ @unassigned       ┃│ │                     │ ││    real-time      ││ │                     │ │                     │ 
+│┃ ▶ description     ┃│ │                     │ ││    WebSocket      ││ │                     │ │                     │ 
+│┗━━━━━━━━━━━━━━━━━━━┛│ │                     │ ││    events         ││ │                     │ │                     │ 
+│╭───────────────────╮│ │                     │ ││ task ●●●          ││ │                     │ │                     │ 
+││ #1 Short task     ││ │                     │ ││ @unassigned       ││ │                     │ │                     │ 
 ││ task ●●           ││ │                     │ │╰───────────────────╯│ │                     │ │                     │ 
+││ @unassigned       ││ │                     │ │                     │ │                     │ │                     │ 
 │╰───────────────────╯│ │                     │ │                     │ │                     │ │                     │ 
-│                     │ │                     │ │                     │ │                     │ │                     │ 
-│                     │ │                     │ │                     │ │                     │ │                     │ 
 │                     │ │                     │ │                     │ │                     │ │                     │ 
 │                     │ │                     │ │                     │ │                     │ │                     │ 
 │                     │ │                     │ │                     │ │                     │ │                     │ 

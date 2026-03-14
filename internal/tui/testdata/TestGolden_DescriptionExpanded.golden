@@ -4,16 +4,17 @@
 │┏━━━━━━━━━━━━━━━━━━━┓│ │╭───────────────────╮│ │╭───────────────────╮│ │╭───────────────────╮│ │╭───────────────────╮│ 
 │┃ #2 Add token      ┃│ ││ #3 Another task   ││ ││ #4 Implement the  ││ ││ #5 Fix bug in     ││ ││ #6 Done task      ││ 
 │┃    refresh        ┃│ ││    in todo column ││ ││    full           ││ ││    review         ││ ││ task ●            ││ 
-│┃    handling for   ┃│ ││ task ●            ││ ││    end-to-end     ││ ││ task ●●           ││ │╰───────────────────╯│ 
-│┃    expired        ┃│ │╰───────────────────╯│ ││    integration    ││ │╰───────────────────╯│ │                     │ 
-│┃    sessions with  ┃│ │                     │ ││    test suite for ││ │                     │ │                     │ 
+│┃    handling for   ┃│ ││ task ●            ││ ││    end-to-end     ││ ││ task ●●           ││ ││ @unassigned       ││ 
+│┃    expired        ┃│ ││ @unassigned       ││ ││    integration    ││ ││ @unassigned       ││ │╰───────────────────╯│ 
+│┃    sessions with  ┃│ │╰───────────────────╯│ ││    test suite for ││ │╰───────────────────╯│ │                     │ 
 │┃    automatic      ┃│ │                     │ ││    cloud          ││ │                     │ │                     │ 
 │┃    retry logic    ┃│ │                     │ ││    synchronizatio ││ │                     │ │                     │ 
 │┃ story ●●          ┃│ │                     │ ││    n with         ││ │                     │ │                     │ 
-│┃ ▼ description     ┃│ │                     │ ││    real-time      ││ │                     │ │                     │ 
-│┃ ───────────────── ┃│ │                     │ ││    WebSocket      ││ │                     │ │                     │ 
-│┃ Handle JWT token  ┃│ │                     │ ││    events         ││ │                     │ │                     │ 
-│┃ expiry by auto    ┃│ │                     │ ││ task ●●●          ││ │                     │ │                     │ 
+│┃ @unassigned       ┃│ │                     │ ││    real-time      ││ │                     │ │                     │ 
+│┃ ▼ description     ┃│ │                     │ ││    WebSocket      ││ │                     │ │                     │ 
+│┃ ───────────────── ┃│ │                     │ ││    events         ││ │                     │ │                     │ 
+│┃ Handle JWT token  ┃│ │                     │ ││ task ●●●          ││ │                     │ │                     │ 
+│┃ expiry by auto    ┃│ │                     │ ││ @unassigned       ││ │                     │ │                     │ 
 │┃ refresh. When a   ┃│ │                     │ │╰───────────────────╯│ │                     │ │                     │ 
 │┃ 401 is received,  ┃│ │                     │ │                     │ │                     │ │                     │ 
 │┃ attempt to        ┃│ │                     │ │                     │ │                     │ │                     │ 
@@ -22,9 +23,8 @@
 │╭───────────────────╮│ │                     │ │                     │ │                     │ │                     │ 
 ││ #1 Short task     ││ │                     │ │                     │ │                     │ │                     │ 
 ││ task ●●           ││ │                     │ │                     │ │                     │ │                     │ 
+││ @unassigned       ││ │                     │ │                     │ │                     │ │                     │ 
 │╰───────────────────╯│ │                     │ │                     │ │                     │ │                     │ 
-│                     │ │                     │ │                     │ │                     │ │                     │ 
-│                     │ │                     │ │                     │ │                     │ │                     │ 
 │                     │ │                     │ │                     │ │                     │ │                     │ 
 │                     │ │                     │ │                     │ │                     │ │                     │ 
 │                     │ │                     │ │                     │ │                     │ │                     │ 

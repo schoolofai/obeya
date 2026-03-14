@@ -44,13 +44,13 @@ func (a App) renderCard(item *domain.Item, selected bool) string {
 	if item.Assignee != "" {
 		name := resolveUserName(a.board, item.Assignee)
 		metaParts = append(metaParts, assigneeStyle.Render("@"+name))
+	} else {
+		metaParts = append(metaParts, unassignedStyle.Render("@unassigned"))
 	}
 	if len(item.BlockedBy) > 0 {
 		metaParts = append(metaParts, blockedStyle.Render("[!]"))
 	}
-	if len(metaParts) > 0 {
-		lines = append(lines, strings.Join(metaParts, " "))
-	}
+	lines = append(lines, strings.Join(metaParts, " "))
 
 	// Accordion indicator — only on selected card with non-empty description
 	if selected && item.Description != "" {

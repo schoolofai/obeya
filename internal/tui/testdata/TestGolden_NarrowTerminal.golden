@@ -4,21 +4,21 @@
 │┏━━━━━━━━━━━━━━━━┓│ │╭────────────────╮│ │╭────────────────╮│ │╭────────────────╮│ │╭────────────────╮│ 
 │┃ #2 Add token   ┃│ ││ #3 Another     ││ ││ #4 Implement   ││ ││ #5 Fix bug in  ││ ││ #6 Done task   ││ 
 │┃    refresh     ┃│ ││    task in     ││ ││    the full    ││ ││    review      ││ ││ task ●         ││ 
-│┃    handling    ┃│ ││    todo column ││ ││    end-to-end  ││ ││ task ●●        ││ │╰────────────────╯│ 
-│┃    for expired ┃│ ││ task ●         ││ ││    integration ││ │╰────────────────╯│ │                  │ 
-│┃    sessions    ┃│ │╰────────────────╯│ ││    test suite  ││ │                  │ │                  │ 
-│┃    with        ┃│ │                  │ ││    for cloud   ││ │                  │ │                  │ 
+│┃    handling    ┃│ ││    todo column ││ ││    end-to-end  ││ ││ task ●●        ││ ││ @unassigned    ││ 
+│┃    for expired ┃│ ││ task ●         ││ ││    integration ││ ││ @unassigned    ││ │╰────────────────╯│ 
+│┃    sessions    ┃│ ││ @unassigned    ││ ││    test suite  ││ │╰────────────────╯│ │                  │ 
+│┃    with        ┃│ │╰────────────────╯│ ││    for cloud   ││ │                  │ │                  │ 
 │┃    automatic   ┃│ │                  │ ││    synchroniza ││ │                  │ │                  │ 
 │┃    retry logic ┃│ │                  │ ││    tion with   ││ │                  │ │                  │ 
 │┃ story ●●       ┃│ │                  │ ││    real-time   ││ │                  │ │                  │ 
-│┃ ▶ description  ┃│ │                  │ ││    WebSocket   ││ │                  │ │                  │ 
-│┗━━━━━━━━━━━━━━━━┛│ │                  │ ││    events      ││ │                  │ │                  │ 
-│╭────────────────╮│ │                  │ ││ task ●●●       ││ │                  │ │                  │ 
+│┃ @unassigned    ┃│ │                  │ ││    WebSocket   ││ │                  │ │                  │ 
+│┃ ▶ description  ┃│ │                  │ ││    events      ││ │                  │ │                  │ 
+│┗━━━━━━━━━━━━━━━━┛│ │                  │ ││ task ●●●       ││ │                  │ │                  │ 
+│╭────────────────╮│ │                  │ ││ @unassigned    ││ │                  │ │                  │ 
 ││ #1 Short task  ││ │                  │ │╰────────────────╯│ │                  │ │                  │ 
 ││ task ●●        ││ │                  │ │                  │ │                  │ │                  │ 
+││ @unassigned    ││ │                  │ │                  │ │                  │ │                  │ 
 │╰────────────────╯│ │                  │ │                  │ │                  │ │                  │ 
-│                  │ │                  │ │                  │ │                  │ │                  │ 
-│                  │ │                  │ │                  │ │                  │ │                  │ 
 │                  │ │                  │ │                  │ │                  │ │                  │ 
 ╰──────────────────╯ ╰──────────────────╯ ╰──────────────────╯ ╰──────────────────╯ ╰──────────────────╯ 
   h/l:columns  j/k:items  v:desc  m:move  a:assign  c:create  d:delete  p:priority  Enter:detail  Space:collapse  /:search  r:reload  q:quit
