@@ -324,13 +324,13 @@ func TestTUI_RenderCard_Isolation(t *testing.T) {
 	}
 
 	app := App{
-		board:      board,
-		columns:    extractColumns(board),
-		collapsed:  make(map[string]bool),
-		colScrollY: make(map[int]int),
-		width:      120,
-		height:     40,
+		board:     board,
+		columns:   extractColumns(board),
+		collapsed: make(map[string]bool),
+		width:     120,
+		height:    40,
 	}
+	app.initColumnModels()
 
 	// Render a few cards with long titles
 	for _, item := range board.Items {

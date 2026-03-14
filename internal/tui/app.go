@@ -16,11 +16,11 @@ type App struct {
 	boardPath string // path to board.json for file watching
 
 	// Board navigation
-	columns    []string
-	cursorCol  int
-	cursorRow  int
-	collapsed  map[string]bool
-	colScrollY map[int]int // per-column scroll offsets
+	columns   []string
+	cursorCol int
+	cursorRow int
+	collapsed map[string]bool
+	colModels []ColumnModel
 
 	// Description accordion
 	descExpanded string // item ID whose description is expanded, "" if none
@@ -48,11 +48,22 @@ type App struct {
 // NewApp creates a new enhanced TUI app backed by the given engine.
 func NewApp(eng *engine.Engine, boardPath string) App {
 	return App{
-		engine:     eng,
-		boardPath:  boardPath,
-		collapsed:  make(map[string]bool),
-		colScrollY: make(map[int]int),
-		state:      stateBoard,
+		engine:    eng,
+		boardPath: boardPath,
+		collapsed: make(map[string]bool),
+		state:     stateBoard,
+	}
+}
+
+func (a *App) initColumnModels() {
+	w := a.columnWidth()
+	viewH := a.contentViewHeight()
+	a.colModels = make([]ColumnModel, len(a.columns))
+	for i, name := range a.columns {
+		a.colModels[i] = NewColumnModel(name, w, viewH)
+	}
+	if a.cursorCol >= 0 && a.cursorCol < len(a.colModels) {
+		a.colModels[a.cursorCol].active = true
 	}
 }
 
@@ -95,10 +106,16 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		a.width = msg.Width
 		a.height = msg.Height
+		w := a.columnWidth()
+		viewH := a.contentViewHeight()
+		for i := range a.colModels {
+			a.colModels[i].SetSize(w, viewH)
+		}
 		return a, nil
 	case boardLoadedMsg:
 		a.board = msg.board
 		a.columns = extractColumns(msg.board)
+		a.initColumnModels()
 		a.clampCursor()
 		if a.state == stateDashboard {
 			a.dashboard = newDashboardModel(a.board, a.width, a.height)
@@ -189,20 +206,19 @@ func (a App) selectedItem() *domain.Item {
 }
 
 func (a *App) scrollToSelected() {
-	if a.height <= 0 || a.board == nil {
+	if a.height <= 0 || a.board == nil || a.cursorCol >= len(a.colModels) {
 		return
 	}
 	item := a.selectedItem()
 	if item == nil {
-		a.colScrollY[a.cursorCol] = 0
+		a.colModels[a.cursorCol].ScrollToLine(0)
 		return
 	}
 
-	// Render card content for the current column only
 	items := a.visibleItemsInColumn(a.cursorCol)
 	cardViews := a.renderGroupedCards(items, a.cursorCol)
 	if len(cardViews) == 0 {
-		a.colScrollY[a.cursorCol] = 0
+		a.colModels[a.cursorCol].ScrollToLine(0)
 		return
 	}
 	cardContent := strings.Join(cardViews, "\n")
@@ -210,11 +226,9 @@ func (a *App) scrollToSelected() {
 
 	viewH := a.contentViewHeight()
 	if viewH <= 0 || len(cardLines) <= viewH {
-		a.colScrollY[a.cursorCol] = 0
+		a.colModels[a.cursorCol].ScrollToLine(0)
 		return
 	}
-
-	maxOffset := len(cardLines) - viewH
 
 	// Find the selected item's marker line
 	marker := fmt.Sprintf("#%d ", item.DisplayNum)
@@ -229,7 +243,7 @@ func (a *App) scrollToSelected() {
 		return
 	}
 
-	offset := a.colScrollY[a.cursorCol]
+	offset := a.colModels[a.cursorCol].viewport.YOffset
 
 	// Scroll up if item is above viewport (with 2-line margin)
 	if cardTop < offset+2 {
@@ -240,14 +254,10 @@ func (a *App) scrollToSelected() {
 		offset = cardTop - viewH + 6
 	}
 
-	// Clamp
-	if offset > maxOffset {
-		offset = maxOffset
-	}
 	if offset < 0 {
 		offset = 0
 	}
-	a.colScrollY[a.cursorCol] = offset
+	a.colModels[a.cursorCol].ScrollToLine(offset)
 }
 
 // contentViewHeight returns the available height for card content inside a column.
@@ -343,7 +353,13 @@ func (a App) handleBoardKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "h", "left":
 		if a.cursorCol > 0 {
 			a.collapseDescription()
+			if len(a.colModels) > 0 {
+				a.colModels[a.cursorCol].active = false
+			}
 			a.cursorCol--
+			if len(a.colModels) > 0 {
+				a.colModels[a.cursorCol].active = true
+			}
 			a.cursorRow = 0
 			a.clampCursor()
 			a.scrollToSelected()
@@ -351,7 +367,13 @@ func (a App) handleBoardKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "l", "right":
 		if a.cursorCol < len(a.columns)-1 {
 			a.collapseDescription()
+			if len(a.colModels) > 0 {
+				a.colModels[a.cursorCol].active = false
+			}
 			a.cursorCol++
+			if len(a.colModels) > 0 {
+				a.colModels[a.cursorCol].active = true
+			}
 			a.cursorRow = 0
 			a.clampCursor()
 			a.scrollToSelected()
@@ -359,7 +381,13 @@ func (a App) handleBoardKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "tab":
 		a.collapseDescription()
 		if len(a.columns) > 0 {
+			if len(a.colModels) > 0 {
+				a.colModels[a.cursorCol].active = false
+			}
 			a.cursorCol = (a.cursorCol + 1) % len(a.columns)
+			if len(a.colModels) > 0 {
+				a.colModels[a.cursorCol].active = true
+			}
 			a.cursorRow = 0
 			a.clampCursor()
 			a.scrollToSelected()

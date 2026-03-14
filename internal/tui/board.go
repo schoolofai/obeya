@@ -11,123 +11,37 @@ import (
 
 func (a App) renderBoard() string {
 	var cols []string
+	w := a.columnWidth()
 	for i, colName := range a.columns {
-		cols = append(cols, a.renderColumn(i, colName))
+		items := a.visibleItemsInColumn(i)
+		nativeCount := 0
+		for _, it := range items {
+			if it.Status == colName {
+				nativeCount++
+			}
+		}
+		cardViews := a.renderGroupedCards(items, i)
+		cardContent := ""
+		if len(cardViews) > 0 {
+			allCards := strings.Join(cardViews, "\n")
+			cardLines := strings.Split(allCards, "\n")
+			for j, line := range cardLines {
+				cardLines[j] = padToWidth(line, w)
+			}
+			cardContent = strings.Join(cardLines, "\n")
+		}
+		if i < len(a.colModels) {
+			a.colModels[i].SetContent(cardContent)
+			cols = append(cols, a.colModels[i].View(nativeCount))
+		}
 	}
-
 	board := lipgloss.JoinHorizontal(lipgloss.Top, cols...)
-
 	header := fmt.Sprintf("  Obeya Board: %s", a.board.Name)
 	help := helpStyle.Render(
 		"  h/l:columns  j/k:items  v:desc  m:move  a:assign  c:create  d:delete  " +
 			"p:priority  Enter:detail  Space:collapse  /:search  r:reload  q:quit",
 	)
-
 	return header + "\n" + board + "\n" + help
-}
-
-func buildScrollbar(trackH, offset, totalLines int) []string {
-	track := make([]string, trackH)
-
-	thumbH := (trackH * trackH) / totalLines
-	if thumbH < 1 {
-		thumbH = 1
-	}
-
-	maxOffset := totalLines - trackH
-	thumbPos := 0
-	if maxOffset > 0 {
-		thumbPos = (offset * (trackH - thumbH)) / maxOffset
-	}
-	if thumbPos < 0 {
-		thumbPos = 0
-	}
-	if thumbPos+thumbH > trackH {
-		thumbPos = trackH - thumbH
-	}
-
-	thumbStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("14"))
-	trackStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("238"))
-
-	for i := 0; i < trackH; i++ {
-		if i >= thumbPos && i < thumbPos+thumbH {
-			track[i] = thumbStyle.Render("┃")
-		} else {
-			track[i] = trackStyle.Render("│")
-		}
-	}
-	return track
-}
-
-func (a App) renderColumn(colIdx int, colName string) string {
-	items := a.visibleItemsInColumn(colIdx)
-	isActive := colIdx == a.cursorCol
-	w := a.columnWidth()
-
-	// Column header — count only items native to this column.
-	nativeCount := 0
-	for _, it := range items {
-		if it.Status == colName {
-			nativeCount++
-		}
-	}
-	count := fmt.Sprintf(" (%d)", nativeCount)
-	var header string
-	if isActive {
-		header = activeColHeader.Render(strings.ToUpper(colName) + count)
-	} else {
-		header = inactiveColHeader.Render(strings.ToUpper(colName) + count)
-	}
-	header = padToWidth(header, w)
-
-	// Card content with per-column scrolling
-	cardViews := a.renderGroupedCards(items, colIdx)
-	viewH := a.contentViewHeight()
-
-	var contentLines []string
-	if len(cardViews) == 0 {
-		// Empty column — fill with blank lines
-		for i := 0; i < viewH; i++ {
-			contentLines = append(contentLines, strings.Repeat(" ", w))
-		}
-	} else {
-		allCards := strings.Join(cardViews, "\n")
-		cardLines := strings.Split(allCards, "\n")
-
-		if viewH > 0 && len(cardLines) > viewH {
-			// Scroll: clip to viewport using this column's offset
-			offset := a.colScrollY[colIdx]
-			maxOffset := len(cardLines) - viewH
-			if offset > maxOffset {
-				offset = maxOffset
-			}
-			if offset < 0 {
-				offset = 0
-			}
-			end := offset + viewH
-			if end > len(cardLines) {
-				end = len(cardLines)
-			}
-			contentLines = make([]string, end-offset)
-			copy(contentLines, cardLines[offset:end])
-		} else {
-			contentLines = cardLines
-		}
-	}
-
-	// Pad all lines to uniform width and pad to viewH
-	for i, line := range contentLines {
-		contentLines[i] = padToWidth(line, w)
-	}
-	for len(contentLines) < viewH {
-		contentLines = append(contentLines, strings.Repeat(" ", w))
-	}
-
-	content := header + "\n" + strings.Join(contentLines, "\n")
-	if isActive {
-		return activeColumnStyle.Render(content)
-	}
-	return columnStyle.Render(content)
 }
 
 func (a App) visibleItemsInColumn(colIdx int) []*domain.Item {
