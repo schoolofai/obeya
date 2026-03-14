@@ -34,20 +34,20 @@ func init() {
 	rootCmd.AddCommand(skillCmd)
 }
 
-type providerInfo struct {
+type ProviderInfo struct {
 	Name      string
 	ConfigDir string
 	SkillFile string
 	Supported bool
 }
 
-func getProviders() []providerInfo {
+func GetProviders() []ProviderInfo {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: cannot determine home directory: %v\n", err)
 		os.Exit(1)
 	}
-	return []providerInfo{
+	return []ProviderInfo{
 		{Name: "claude-code", ConfigDir: filepath.Join(home, ".claude"), SkillFile: "obeya.md", Supported: true},
 		{Name: "opencode", ConfigDir: filepath.Join(home, ".opencode"), SkillFile: "obeya.md", Supported: false},
 		{Name: "codex", ConfigDir: filepath.Join(home, ".codex"), SkillFile: "obeya.md", Supported: false},
@@ -56,7 +56,7 @@ func getProviders() []providerInfo {
 
 func runSkillInstall(cmd *cobra.Command, args []string) {
 	skillSource := findSkillSource()
-	providers := getProviders()
+	providers := GetProviders()
 
 	if flagSkillProvider != "" {
 		providers = filterProviders(providers, flagSkillProvider)
@@ -98,10 +98,10 @@ func findSkillSource() []byte {
 	return data
 }
 
-func filterProviders(providers []providerInfo, name string) []providerInfo {
+func filterProviders(providers []ProviderInfo, name string) []ProviderInfo {
 	for _, p := range providers {
 		if p.Name == name {
-			return []providerInfo{p}
+			return []ProviderInfo{p}
 		}
 	}
 	fmt.Fprintf(os.Stderr, "Error: unknown provider %q.\n\n"+
@@ -110,7 +110,7 @@ func filterProviders(providers []providerInfo, name string) []providerInfo {
 	return nil
 }
 
-func installSkillForProvider(p providerInfo, content []byte) error {
+func installSkillForProvider(p ProviderInfo, content []byte) error {
 	if err := os.MkdirAll(p.ConfigDir, 0755); err != nil {
 		return fmt.Errorf("failed to create config dir %s: %w", p.ConfigDir, err)
 	}
@@ -122,7 +122,7 @@ func installSkillForProvider(p providerInfo, content []byte) error {
 }
 
 func runSkillList(cmd *cobra.Command, args []string) {
-	providers := getProviders()
+	providers := GetProviders()
 	fmt.Printf("%-15s %-15s %s\n", "PROVIDER", "SUPPORTED", "STATUS")
 	for _, p := range providers {
 		supported := "yes"

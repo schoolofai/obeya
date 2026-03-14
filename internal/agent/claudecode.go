@@ -147,6 +147,48 @@ Use ` + "`ob list --format json`" + ` for full board state.
 `
 }
 
+// CheckClaudeCLI verifies the claude CLI is available in PATH.
+// Call this once before using UninstallPlugin — UninstallPlugin trusts it was already called.
+func CheckClaudeCLI() error {
+	_, err := exec.LookPath("claude")
+	if err != nil {
+		return fmt.Errorf("claude CLI not found in PATH. Required to uninstall plugin.\n" +
+			"Install it or remove the plugin manually:\n" +
+			"  claude plugin uninstall obeya@obeya-local\n" +
+			"  claude plugin marketplace remove obeya-local")
+	}
+	return nil
+}
+
+// UninstallPlugin removes the obeya plugin and marketplace registration via claude CLI.
+// Caller must call CheckClaudeCLI first. Skips steps if already uninstalled (idempotent).
+func UninstallPlugin() error {
+	if alreadyInstalled() {
+		cmd := exec.Command("claude", "plugin", "uninstall", pluginRef)
+		if out, err := cmd.CombinedOutput(); err != nil {
+			return fmt.Errorf("failed to uninstall plugin: %s: %w", string(out), err)
+		}
+	}
+
+	if marketplaceRegistered() {
+		cmd := exec.Command("claude", "plugin", "marketplace", "remove", "obeya-local")
+		if out, err := cmd.CombinedOutput(); err != nil {
+			return fmt.Errorf("failed to remove marketplace: %s: %w", string(out), err)
+		}
+	}
+
+	return nil
+}
+
+func marketplaceRegistered() bool {
+	cmd := exec.Command("claude", "plugin", "marketplace", "list")
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return false
+	}
+	return strings.Contains(string(out), "obeya")
+}
+
 // AppendClaudeMDAt writes or updates the obeya section in a CLAUDE.md file.
 func AppendClaudeMDAt(claudePath string) error {
 	content := ObeyaClaudeMDContent()
@@ -205,4 +247,48 @@ func AppendClaudeMDAt(claudePath string) error {
 	}
 
 	return nil
+}
+
+// StripClaudeMDAt removes the obeya section from a CLAUDE.md file.
+// Returns nil if the file doesn't exist or has no obeya markers (idempotent).
+func StripClaudeMDAt(claudePath string) error {
+	existing, err := os.ReadFile(claudePath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return fmt.Errorf("failed to read %s: %w", claudePath, err)
+	}
+
+	content := string(existing)
+	startIdx := strings.Index(content, ObeyaSectionStart)
+	if startIdx == -1 {
+		return nil
+	}
+
+	endIdx := strings.Index(content, ObeyaSectionEnd)
+	if endIdx == -1 {
+		return fmt.Errorf("found obeya section start but no end marker in %s", claudePath)
+	}
+	endIdx += len(ObeyaSectionEnd)
+
+	// Expand to consume surrounding blank lines
+	for startIdx > 0 && content[startIdx-1] == '\n' {
+		startIdx--
+	}
+	for endIdx < len(content) && content[endIdx] == '\n' {
+		endIdx++
+	}
+
+	cleaned := content[:startIdx]
+	if startIdx > 0 && endIdx < len(content) {
+		cleaned += "\n"
+	}
+	cleaned += content[endIdx:]
+
+	if strings.TrimSpace(cleaned) == "" {
+		return os.Remove(claudePath)
+	}
+
+	return os.WriteFile(claudePath, []byte(cleaned), 0644)
 }
