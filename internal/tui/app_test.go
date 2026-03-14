@@ -43,10 +43,11 @@ func testBoard(t *testing.T) (string, *engine.Engine) {
 			},
 			"item-2": map[string]interface{}{
 				"id": "item-2", "display_num": 2,
-				"title":    "Add token refresh handling for expired sessions with automatic retry logic",
-				"type":     "story",
-				"status":   "backlog",
-				"priority": "high",
+				"title":       "Add token refresh handling for expired sessions with automatic retry logic",
+				"description": "Handle JWT token expiry by auto refresh. When a 401 is received, attempt to refresh before failing.",
+				"type":        "story",
+				"status":      "backlog",
+				"priority":    "high",
 			},
 			"item-3": map[string]interface{}{
 				"id": "item-3", "display_num": 3,
@@ -306,6 +307,65 @@ func TestTUI_RealBoard_Navigation(t *testing.T) {
 		screen := getScreen(t, tm)
 		t.Logf("\n=== REAL BOARD AFTER 5x 'j' ===\n%s", screen)
 	})
+}
+
+func TestTUI_ScrollbarVisible(t *testing.T) {
+	boardFile := "/Users/niladribose/code/obeya/.obeya/board.json"
+	if _, err := os.Stat(boardFile); err != nil {
+		t.Skip("real board.json not found, skipping")
+	}
+
+	gitRoot := "/Users/niladribose/code/obeya"
+	s := store.NewJSONStore(gitRoot)
+	eng := engine.New(s)
+	app := NewApp(eng, boardFile)
+
+	tm := teatest.NewTestModel(t, app, teatest.WithInitialTermSize(120, 40))
+
+	// Give time for async board load
+	time.Sleep(500 * time.Millisecond)
+
+	screen := getScreen(t, tm)
+	t.Logf("\n=== SCROLLBAR TEST (120x40) ===\n%s", screen)
+
+	if !strings.Contains(screen, "┃") {
+		t.Error("expected scrollbar thumb character ┃ to be visible in rendered output")
+	}
+}
+
+func TestTUI_DescriptionAccordion(t *testing.T) {
+	boardFile, eng := testBoard(t)
+	tm := startAndWait(t, eng, boardFile, 120, 40)
+
+	// Press 'v' to expand description on the selected item (item-2 in backlog)
+	tm.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("v")})
+	time.Sleep(100 * time.Millisecond)
+
+	screen := getScreen(t, tm)
+	t.Logf("\n=== DESCRIPTION ACCORDION (after 'v') ===\n%s", screen)
+
+	if !strings.Contains(screen, "▼ description") {
+		t.Error("expected expanded description indicator '▼ description' in output")
+	}
+}
+
+func TestTUI_Resize(t *testing.T) {
+	boardFile, eng := testBoard(t)
+	tm := startAndWait(t, eng, boardFile, 120, 40)
+
+	// Send resize message
+	tm.Send(tea.WindowSizeMsg{Width: 80, Height: 24})
+	time.Sleep(100 * time.Millisecond)
+
+	screen := getScreen(t, tm)
+	t.Logf("\n=== RESIZE TEST (80x24) ===\n%s", screen)
+
+	lines := strings.Split(screen, "\n")
+	t.Logf("Line count after resize: %d", len(lines))
+
+	if len(lines) > 26 {
+		t.Errorf("expected <= 26 lines after resize to 80x24, got %d", len(lines))
+	}
 }
 
 // TestTUI_RenderCard_Isolation tests renderCard directly to check for blank lines.
