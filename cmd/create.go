@@ -28,6 +28,13 @@ var createCmd = &cobra.Command{
 		itemType := args[0]
 		title := args[1]
 
+		if createAssign == "" {
+			return fmt.Errorf("--assign is required. Every item must have an owner.\n\n" +
+				"Examples:\n  ob create task \"Fix bug\" --assign claude\n  ob create epic \"Auth system\" --assign niladri\n\n" +
+				"If you are an agent, assign yourself:\n  Claude agent:  --assign claude\n  Codex agent:   --assign codex\n  Cursor agent:  --assign cursor\n\n" +
+				"Run 'ob user list' to see registered users.")
+		}
+
 		if createBodyFile != "" && createDesc != "" {
 			return fmt.Errorf("--body-file and -d/--description are mutually exclusive")
 		}

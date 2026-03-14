@@ -38,7 +38,7 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringVar(&flagAs, "as", "", "user ID for this operation (or set OB_USER)")
+	rootCmd.PersistentFlags().StringVar(&flagAs, "as", "", "user ID for audit trail (who ran this command)")
 	rootCmd.PersistentFlags().StringVar(&flagSession, "session", "", "session ID for audit trail (or set OB_SESSION)")
 	rootCmd.PersistentFlags().StringVar(&flagFormat, "format", "text", "output format: text or json")
 }

@@ -48,12 +48,15 @@ func getEngine() (*engine.Engine, error) {
 	return engine.New(s), nil
 }
 
+func init() {
+	if os.Getenv("OB_USER") != "" {
+		fmt.Fprintln(os.Stderr, "Warning: OB_USER is deprecated and ignored. Use --assign for ownership, --as for audit.")
+	}
+}
+
 func getUserID() string {
 	if flagAs != "" {
 		return flagAs
-	}
-	if id := os.Getenv("OB_USER"); id != "" {
-		return id
 	}
 	u, err := user.Current()
 	if err != nil {
