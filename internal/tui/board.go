@@ -79,16 +79,17 @@ func (a App) renderColumn(colIdx int, colName string) string {
 	} else {
 		header = inactiveColHeader.Render(strings.ToUpper(colName) + count)
 	}
+	header = padToWidth(header, w)
 
 	// Card content with per-column scrolling
 	cardViews := a.renderGroupedCards(items, colIdx)
 	viewH := a.contentViewHeight()
 
-	var cardContent string
+	var contentLines []string
 	if len(cardViews) == 0 {
-		// Empty column — pad to viewport height
-		if viewH > 0 {
-			cardContent = strings.Repeat("\n", viewH)
+		// Empty column — fill with blank lines
+		for i := 0; i < viewH; i++ {
+			contentLines = append(contentLines, strings.Repeat(" ", w))
 		}
 	} else {
 		allCards := strings.Join(cardViews, "\n")
@@ -108,34 +109,26 @@ func (a App) renderColumn(colIdx int, colName string) string {
 			if end > len(cardLines) {
 				end = len(cardLines)
 			}
-
-			visible := make([]string, end-offset)
-			copy(visible, cardLines[offset:end])
-
-			// Per-column scrollbar
-			scrollbar := buildScrollbar(viewH, offset, len(cardLines))
-			for i := range visible {
-				if i < len(scrollbar) {
-					visible[i] = visible[i] + " " + scrollbar[i]
-				}
-			}
-			cardContent = strings.Join(visible, "\n")
-		} else if viewH > 0 && len(cardLines) < viewH {
-			// Pad shorter columns to uniform height
-			for len(cardLines) < viewH {
-				cardLines = append(cardLines, "")
-			}
-			cardContent = strings.Join(cardLines, "\n")
+			contentLines = make([]string, end-offset)
+			copy(contentLines, cardLines[offset:end])
 		} else {
-			cardContent = allCards
+			contentLines = cardLines
 		}
 	}
 
-	content := header + "\n" + cardContent
-	if isActive {
-		return activeColumnStyle.Width(w).Render(content)
+	// Pad all lines to uniform width and pad to viewH
+	for i, line := range contentLines {
+		contentLines[i] = padToWidth(line, w)
 	}
-	return columnStyle.Width(w).Render(content)
+	for len(contentLines) < viewH {
+		contentLines = append(contentLines, strings.Repeat(" ", w))
+	}
+
+	content := header + "\n" + strings.Join(contentLines, "\n")
+	if isActive {
+		return activeColumnStyle.Render(content)
+	}
+	return columnStyle.Render(content)
 }
 
 func (a App) renderCard(item *domain.Item, selected bool) string {
@@ -193,11 +186,17 @@ func (a App) renderCard(item *domain.Item, selected bool) string {
 		}
 	}
 
+	// Pre-pad all lines to contentW to avoid lipgloss Width() blank-line bug.
+	// lipgloss Width() on multi-line ANSI content inserts spurious blank lines.
+	for i, line := range lines {
+		lines[i] = padToWidth(line, contentW)
+	}
+
 	content := strings.Join(lines, "\n")
 	if selected {
-		return selectedCardStyle.Width(w - 2).Render(content)
+		return selectedCardStyle.Render(content)
 	}
-	return cardStyle.Width(w - 2).Render(content)
+	return cardStyle.Render(content)
 }
 
 func (a App) renderGroupedCards(items []*domain.Item, colIdx int) []string {
@@ -482,16 +481,20 @@ func (a App) renderBoardWithOverlay(overlay string) string {
 	return board + "\n\n" + overlayRendered
 }
 
+// columnWidth returns the content width for each column.
+// Layout per column: border(2) + content(w) + marginRight(1).
+// Total: n*(w+3) - 1 <= terminal_width  =>  w = (terminal_width + 1 - 3*n) / n
 func (a App) columnWidth() int {
 	if a.width == 0 || len(a.columns) == 0 {
-		return 24
+		return 22
 	}
-	w := (a.width - 2) / len(a.columns)
-	if w < 20 {
-		return 20
+	n := len(a.columns)
+	w := (a.width + 1 - 3*n) / n
+	if w < 18 {
+		return 18
 	}
-	if w > 30 {
-		return 30
+	if w > 28 {
+		return 28
 	}
 	return w
 }
@@ -537,6 +540,16 @@ func resolveUserName(board *domain.Board, userID string) string {
 		return u.Name
 	}
 	return userID
+}
+
+// padToWidth pads a string (which may contain ANSI codes) with spaces
+// so its visual width equals targetW. Uses lipgloss.Width for ANSI-aware measurement.
+func padToWidth(s string, targetW int) string {
+	visW := lipgloss.Width(s)
+	if visW >= targetW {
+		return s
+	}
+	return s + strings.Repeat(" ", targetW-visW)
 }
 
 func truncate(s string, maxLen int) string {

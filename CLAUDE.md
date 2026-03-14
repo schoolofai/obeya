@@ -51,6 +51,78 @@ Use `ob list --format json` for full board state.
 
 <!-- obeya:end -->
 
+## TUI Testing — teatest
+
+All TUI features MUST have automated tests using Charm's `teatest` library. The TUI is the primary user interface and regressions are unacceptable.
+
+### Setup
+
+```go
+import (
+    tea "github.com/charmbracelet/bubbletea"
+    "github.com/charmbracelet/x/exp/teatest"
+)
+```
+
+### Core Pattern
+
+```go
+func TestFeature(t *testing.T) {
+    // 1. Create model with fixed terminal size
+    m := NewTestApp(boardPath)
+    tm := teatest.NewTestModel(t, m, teatest.WithInitialTermSize(120, 40))
+
+    // 2. Send key presses to navigate
+    tm.Send(tea.KeyMsg{Type: tea.KeyRight})  // arrow keys
+    tm.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})  // letter keys
+
+    // 3. Assert on rendered output
+    teatest.WaitFor(t, tm.Output(), func(bts []byte) bool {
+        return bytes.Contains(bts, []byte("expected column header"))
+    }, teatest.WithDuration(2*time.Second))
+
+    // 4. Clean up
+    tm.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("q")})
+    tm.WaitFinished(t, teatest.WithFinalTimeout(time.Second))
+}
+```
+
+### Best Practices
+
+1. **Always set a fixed terminal size** — use `WithInitialTermSize(120, 40)` to ensure deterministic rendering. Never rely on the host terminal dimensions.
+2. **Test navigation paths, not pixel positions** — assert that column headers, card titles, or status text appear in the output after key sequences, not that they appear at specific coordinates.
+3. **Use `WaitFor` for async assertions** — the TUI renders asynchronously. Never read output immediately after sending keys; use `WaitFor` with a condition function.
+4. **Golden file tests for visual regressions** — use `teatest.RequireEqualOutput(t, out)` for layout-sensitive features. Run `go test -update` to regenerate golden files after intentional changes.
+5. **One test per navigation path** — test column scrolling (h/l), card navigation (j/k), description accordion (v/J/K), and view switching independently.
+6. **Test at boundary sizes** — test with narrow terminals (80x24), wide terminals (200x50), and the default (120x40) to catch overflow and wrapping bugs.
+7. **Every TUI PR must include teatest coverage** — no TUI changes are considered complete without corresponding automated tests that exercise the changed rendering or key handling.
+
+### Key Message Reference
+
+```go
+// Arrow keys
+tea.KeyMsg{Type: tea.KeyUp}
+tea.KeyMsg{Type: tea.KeyDown}
+tea.KeyMsg{Type: tea.KeyLeft}
+tea.KeyMsg{Type: tea.KeyRight}
+
+// Letter keys
+tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")}
+
+// Special keys
+tea.KeyMsg{Type: tea.KeyEnter}
+tea.KeyMsg{Type: tea.KeyEsc}
+tea.KeyMsg{Type: tea.KeyTab}
+tea.KeyMsg{Type: tea.KeySpace}
+
+// Type a string (sends individual key events)
+tm.Type("search text")
+```
+
+### Test File Location
+
+TUI tests go in `internal/tui/app_test.go` (integration/navigation tests) and `internal/tui/board_test.go` (unit tests for rendering functions).
+
 ## Releasing to Homebrew
 
 The `ob` CLI is distributed via Homebrew through `schoolofai/homebrew-tap`. The release pipeline is fully automated — pushing a git tag triggers everything.
