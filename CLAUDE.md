@@ -1,4 +1,31 @@
 
+## CRITICAL: Validation Before Any Commit
+
+**Every agent MUST run the test suite before committing or claiming work is done.** This is non-negotiable.
+
+```bash
+./scripts/test.sh
+```
+
+This runs 4 checks in order — all must pass:
+1. **Build** — `go build ./...` (compile check)
+2. **Vet** — `go vet ./...` (static analysis)
+3. **Tests** — `go test ./...` (257 tests across 10 packages)
+4. **Golden files** — `go test ./internal/tui/ -run TestGolden` (8 TUI visual snapshots)
+
+If golden file tests fail after intentional TUI changes, regenerate with:
+```bash
+./scripts/test.sh --update
+```
+
+Quick options for faster feedback during development:
+```bash
+./scripts/test.sh --tui       # TUI tests only
+./scripts/test.sh --golden    # golden file snapshots only
+```
+
+**Never skip this.** A failing test suite means the work is not done.
+
 <!-- obeya:start --> v5
 
 ## Task Tracking — Obeya
