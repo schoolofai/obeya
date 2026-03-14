@@ -52,7 +52,9 @@ export default function LoginPage() {
           onChange={(e) => setPassword(e.target.value)}
           required
         />
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && (
+          <p className="font-mono text-sm text-[#f85149]">{error}</p>
+        )}
         <Button
           type="submit"
           variant="primary"
@@ -63,11 +65,11 @@ export default function LoginPage() {
         </Button>
       </form>
       <OAuthButtons />
-      <p className="text-center text-sm text-gray-600">
+      <p className="text-center font-mono text-sm text-[#8b949e]">
         {"Don't have an account? "}
         <Link
           href="/auth/signup"
-          className="font-medium text-blue-600 hover:underline"
+          className="font-medium text-[#7aa2f7] hover:underline"
         >
           Sign up
         </Link>
@@ -79,8 +81,12 @@ export default function LoginPage() {
 function PageTitle() {
   return (
     <div className="text-center">
-      <h2 className="text-xl font-semibold text-gray-900">Welcome back</h2>
-      <p className="mt-1 text-sm text-gray-500">Sign in to your account</p>
+      <h2 className="font-mono text-xl font-semibold text-[#c9d1d9]">
+        Welcome back
+      </h2>
+      <p className="mt-1 font-mono text-sm text-[#8b949e]">
+        Sign in to your account
+      </p>
     </div>
   );
 }
@@ -90,23 +96,29 @@ function OAuthButtons() {
     <div className="space-y-3">
       <div className="relative">
         <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-gray-200" />
+          <div className="w-full border-t border-[#30363d]" />
         </div>
         <div className="relative flex justify-center text-xs">
-          <span className="bg-white px-2 text-gray-500">or continue with</span>
+          <span className="bg-[#161b22] px-2 font-mono text-[#484f58]">
+            or continue with
+          </span>
         </div>
       </div>
       <div className="grid grid-cols-2 gap-3">
         <Button
           variant="secondary"
-          onClick={() => { window.location.href = "/api/auth/oauth/github"; }}
+          onClick={() => {
+            window.location.href = "/api/auth/oauth/github";
+          }}
           type="button"
         >
           GitHub
         </Button>
         <Button
           variant="secondary"
-          onClick={() => { window.location.href = "/api/auth/oauth/google"; }}
+          onClick={() => {
+            window.location.href = "/api/auth/oauth/google";
+          }}
           type="button"
         >
           Google
