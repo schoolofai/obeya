@@ -9,7 +9,7 @@ interface HeaderProps {
 
 export function Header({ user }: HeaderProps) {
   return (
-    <header className="flex h-16 items-center justify-end border-b border-gray-200 bg-white px-6">
+    <header className="flex h-16 items-center justify-end border-b border-[#21262d] bg-[#0d1117] px-6">
       {user && <UserInfo user={user} />}
     </header>
   );
@@ -22,7 +22,9 @@ interface UserInfoProps {
 function UserInfo({ user }: UserInfoProps) {
   return (
     <div className="flex items-center gap-3">
-      <span className="text-sm font-medium text-gray-700">{user.name}</span>
+      <span className="font-mono text-sm font-medium text-[#c9d1d9]">
+        {user.name}
+      </span>
       <Avatar name={user.name} size="sm" />
     </div>
   );

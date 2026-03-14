@@ -16,7 +16,9 @@ export function AppShell({ user, children }: AppShellProps) {
       <Sidebar />
       <div className="flex flex-1 flex-col overflow-hidden">
         <Header user={user} />
-        <main className="flex-1 overflow-auto p-6">{children}</main>
+        <main className="flex-1 overflow-auto bg-[#0d1117] p-6">
+          {children}
+        </main>
       </div>
     </div>
   );
