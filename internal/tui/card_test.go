@@ -272,3 +272,40 @@ func TestRenderCard_UnassignedNotShownWhenAssigned(t *testing.T) {
 		t.Errorf("expected @bob, got:\n%s", plain)
 	}
 }
+
+// --- firstRegisteredUser tests ---
+
+func TestFirstRegisteredUser_WithUsers(t *testing.T) {
+	a := newTestApp(
+		map[string]*domain.Item{},
+		map[string]*domain.Identity{
+			"user-1": {ID: "user-1", Name: "Alice"},
+		},
+	)
+	got := a.firstRegisteredUser()
+	if got == "" {
+		t.Fatal("expected a user ID, got empty string")
+	}
+	if got != "user-1" {
+		t.Errorf("expected 'user-1', got %q", got)
+	}
+}
+
+func TestFirstRegisteredUser_NoUsers(t *testing.T) {
+	a := newTestApp(
+		map[string]*domain.Item{},
+		map[string]*domain.Identity{},
+	)
+	got := a.firstRegisteredUser()
+	if got != "" {
+		t.Errorf("expected empty string when no users, got %q", got)
+	}
+}
+
+func TestFirstRegisteredUser_NilBoard(t *testing.T) {
+	a := App{board: nil}
+	got := a.firstRegisteredUser()
+	if got != "" {
+		t.Errorf("expected empty string with nil board, got %q", got)
+	}
+}

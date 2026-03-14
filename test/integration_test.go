@@ -3,8 +3,10 @@ package test
 import (
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 
+	"github.com/niladribose/obeya/internal/domain"
 	"github.com/niladribose/obeya/internal/engine"
 	"github.com/niladribose/obeya/internal/store"
 )
@@ -16,7 +18,9 @@ func setupTestEngine(t *testing.T) *engine.Engine {
 	if err := s.InitBoard("integration-test", nil); err != nil {
 		t.Fatalf("InitBoard failed: %v", err)
 	}
-	return engine.New(s)
+	eng := engine.New(s)
+	_ = eng.AddUser("testuser", "human", "local")
+	return eng
 }
 
 func TestIntegration_FullFlow(t *testing.T) {
@@ -54,7 +58,7 @@ func TestIntegration_FullFlow(t *testing.T) {
 	}
 
 	// --- Create hierarchy: epic -> story -> task (with tags) ---
-	epic, err := eng.CreateItem("epic", "Platform Build", "", "Build the platform", "high", "", nil)
+	epic, err := eng.CreateItem("epic", "Platform Build", "", "Build the platform", "high", "alice", nil)
 	if err != nil {
 		t.Fatalf("CreateItem (epic) failed: %v", err)
 	}
@@ -62,7 +66,7 @@ func TestIntegration_FullFlow(t *testing.T) {
 		t.Errorf("expected epic display num 1, got %d", epic.DisplayNum)
 	}
 
-	story, err := eng.CreateItem("story", "Auth Module", fmt.Sprintf("%d", epic.DisplayNum), "Implement auth", "medium", "", []string{"auth", "backend"})
+	story, err := eng.CreateItem("story", "Auth Module", fmt.Sprintf("%d", epic.DisplayNum), "Implement auth", "medium", "alice", []string{"auth", "backend"})
 	if err != nil {
 		t.Fatalf("CreateItem (story) failed: %v", err)
 	}
@@ -73,7 +77,7 @@ func TestIntegration_FullFlow(t *testing.T) {
 		t.Errorf("expected story parent to be epic ID")
 	}
 
-	task1, err := eng.CreateItem("task", "Login endpoint", fmt.Sprintf("%d", story.DisplayNum), "", "high", "", []string{"auth", "api"})
+	task1, err := eng.CreateItem("task", "Login endpoint", fmt.Sprintf("%d", story.DisplayNum), "", "high", "alice", []string{"auth", "api"})
 	if err != nil {
 		t.Fatalf("CreateItem (task1) failed: %v", err)
 	}
@@ -81,7 +85,7 @@ func TestIntegration_FullFlow(t *testing.T) {
 		t.Errorf("expected task1 display num 3, got %d", task1.DisplayNum)
 	}
 
-	task2, err := eng.CreateItem("task", "JWT validation", fmt.Sprintf("%d", story.DisplayNum), "", "medium", "", []string{"auth"})
+	task2, err := eng.CreateItem("task", "JWT validation", fmt.Sprintf("%d", story.DisplayNum), "", "medium", "alice", []string{"auth"})
 	if err != nil {
 		t.Fatalf("CreateItem (task2) failed: %v", err)
 	}
@@ -242,7 +246,7 @@ func TestIntegration_AssignAndEdit(t *testing.T) {
 		t.Fatalf("AddUser failed: %v", err)
 	}
 
-	task, err := eng.CreateItem("task", "Test task", "", "", "low", "", nil)
+	task, err := eng.CreateItem("task", "Test task", "", "", "low", "dev1", nil)
 	if err != nil {
 		t.Fatalf("CreateItem failed: %v", err)
 	}
@@ -305,7 +309,7 @@ func TestIntegration_BoardConfig(t *testing.T) {
 	}
 
 	// Remove column with items should fail
-	eng.CreateItem("task", "blocker", "", "", "", "", nil)
+	eng.CreateItem("task", "blocker", "", "", "", "testuser", nil)
 	eng.MoveItem("1", "todo", "", "")
 	if err := eng.RemoveColumn("todo"); err == nil {
 		t.Error("expected error removing column with items")
@@ -328,8 +332,8 @@ func TestIntegration_UserManagement(t *testing.T) {
 	}
 
 	board, _ := eng.ListBoard()
-	if len(board.Users) != 2 {
-		t.Fatalf("expected 2 users, got %d", len(board.Users))
+	if len(board.Users) != 3 {
+		t.Fatalf("expected 3 users, got %d", len(board.Users))
 	}
 
 	// Remove user by name
@@ -338,21 +342,21 @@ func TestIntegration_UserManagement(t *testing.T) {
 	}
 
 	board, _ = eng.ListBoard()
-	if len(board.Users) != 1 {
-		t.Errorf("expected 1 user after removal, got %d", len(board.Users))
+	if len(board.Users) != 2 {
+		t.Errorf("expected 2 users after removal, got %d", len(board.Users))
 	}
 }
 
 func TestIntegration_GetChildren(t *testing.T) {
 	eng := setupTestEngine(t)
 
-	parent, err := eng.CreateItem("epic", "Parent", "", "", "", "", nil)
+	parent, err := eng.CreateItem("epic", "Parent", "", "", "", "testuser", nil)
 	if err != nil {
 		t.Fatalf("CreateItem (parent) failed: %v", err)
 	}
 
 	for i := 0; i < 3; i++ {
-		_, err := eng.CreateItem("story", fmt.Sprintf("Child %d", i), fmt.Sprintf("%d", parent.DisplayNum), "", "", "", nil)
+		_, err := eng.CreateItem("story", fmt.Sprintf("Child %d", i), fmt.Sprintf("%d", parent.DisplayNum), "", "", "testuser", nil)
 		if err != nil {
 			t.Fatalf("CreateItem (child %d) failed: %v", i, err)
 		}
@@ -388,13 +392,14 @@ func TestIntegration_CustomColumns(t *testing.T) {
 	}
 
 	eng := engine.New(s)
+	_ = eng.AddUser("testuser", "human", "local")
 	board, _ := eng.ListBoard()
 	if len(board.Columns) != 3 {
 		t.Errorf("expected 3 columns, got %d", len(board.Columns))
 	}
 
 	// Items should start in first custom column
-	item, err := eng.CreateItem("task", "Test", "", "", "", "", nil)
+	item, err := eng.CreateItem("task", "Test", "", "", "", "testuser", nil)
 	if err != nil {
 		t.Fatalf("CreateItem failed: %v", err)
 	}
@@ -407,11 +412,11 @@ func TestIntegration_PlanWorkflow(t *testing.T) {
 	eng := setupTestEngine(t)
 
 	// Create items
-	epic, err := eng.CreateItem("epic", "Auth System", "", "", "high", "", nil)
+	epic, err := eng.CreateItem("epic", "Auth System", "", "", "high", "testuser", nil)
 	if err != nil {
 		t.Fatalf("CreateItem epic failed: %v", err)
 	}
-	task, err := eng.CreateItem("task", "JWT Validation", fmt.Sprintf("%d", epic.DisplayNum), "", "medium", "", nil)
+	task, err := eng.CreateItem("task", "JWT Validation", fmt.Sprintf("%d", epic.DisplayNum), "", "medium", "testuser", nil)
 	if err != nil {
 		t.Fatalf("CreateItem task failed: %v", err)
 	}
@@ -451,7 +456,7 @@ func TestIntegration_PlanWorkflow(t *testing.T) {
 	}
 
 	// Link additional item
-	task2, _ := eng.CreateItem("task", "Middleware", fmt.Sprintf("%d", epic.DisplayNum), "", "medium", "", nil)
+	task2, _ := eng.CreateItem("task", "Middleware", fmt.Sprintf("%d", epic.DisplayNum), "", "medium", "testuser", nil)
 	if err := eng.LinkPlan(fmt.Sprintf("%d", plan.DisplayNum), []string{fmt.Sprintf("%d", task2.DisplayNum)}); err != nil {
 		t.Fatalf("LinkPlan failed: %v", err)
 	}
@@ -502,4 +507,178 @@ func TestIntegration_CLISmokeTest(t *testing.T) {
 	if _, err := os.Stat("../ob"); err != nil {
 		t.Skip("ob binary not found — skipping CLI smoke test (run 'go build -o ob .' first)")
 	}
+}
+
+// TestIntegration_AssignThenMoveFlow tests the full mandatory assignment lifecycle:
+// unassigned item → move blocked → assign → move succeeds
+func TestIntegration_AssignThenMoveFlow(t *testing.T) {
+	tmpDir := t.TempDir()
+	s := store.NewJSONStore(tmpDir)
+	if err := s.InitBoard("assign-flow", nil); err != nil {
+		t.Fatalf("InitBoard failed: %v", err)
+	}
+	eng := engine.New(s)
+
+	// Register a user
+	if err := eng.AddUser("agent-1", "agent", "claude-code"); err != nil {
+		t.Fatalf("AddUser failed: %v", err)
+	}
+
+	// Create an assigned item
+	task, err := eng.CreateItem("task", "Normal task", "", "has owner", "medium", "agent-1", nil)
+	if err != nil {
+		t.Fatalf("CreateItem failed: %v", err)
+	}
+
+	// Move should succeed on assigned item
+	if err := eng.MoveItem(fmt.Sprintf("%d", task.DisplayNum), "in-progress", "", ""); err != nil {
+		t.Fatalf("MoveItem on assigned item should succeed: %v", err)
+	}
+
+	// Create a legacy unassigned item directly via store (simulates pre-migration data)
+	var unassignedNum int
+	err = s.Transaction(func(board *domain.Board) error {
+		item := &domain.Item{
+			ID:          domain.GenerateID(),
+			DisplayNum:  board.NextDisplay,
+			Type:        "task",
+			Title:       "Legacy unassigned",
+			Description: "no owner",
+			Status:      board.Columns[0].Name,
+			Priority:    "medium",
+			Assignee:    "",
+		}
+		board.Items[item.ID] = item
+		board.DisplayMap[item.DisplayNum] = item.ID
+		board.NextDisplay++
+		unassignedNum = item.DisplayNum
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("create unassigned item failed: %v", err)
+	}
+
+	// Move should FAIL on unassigned item
+	err = eng.MoveItem(fmt.Sprintf("%d", unassignedNum), "in-progress", "", "")
+	if err == nil {
+		t.Fatal("MoveItem on unassigned item should fail")
+	}
+	if !strings.Contains(err.Error(), "no assignee") {
+		t.Errorf("expected 'no assignee' error, got: %v", err)
+	}
+
+	// Edit should FAIL on unassigned item
+	err = eng.EditItem(fmt.Sprintf("%d", unassignedNum), "new title", "", "", "", "")
+	if err == nil {
+		t.Fatal("EditItem on unassigned item should fail")
+	}
+
+	// Delete should FAIL on unassigned item
+	err = eng.DeleteItem(fmt.Sprintf("%d", unassignedNum), "", "")
+	if err == nil {
+		t.Fatal("DeleteItem on unassigned item should fail")
+	}
+
+	// Assign should SUCCEED (this is the fix path)
+	err = eng.AssignItem(fmt.Sprintf("%d", unassignedNum), "agent-1", "", "")
+	if err != nil {
+		t.Fatalf("AssignItem on unassigned item should succeed: %v", err)
+	}
+
+	// Now move should SUCCEED
+	err = eng.MoveItem(fmt.Sprintf("%d", unassignedNum), "in-progress", "", "")
+	if err != nil {
+		t.Fatalf("MoveItem after assign should succeed: %v", err)
+	}
+
+	// Verify final state
+	item, _ := eng.GetItem(fmt.Sprintf("%d", unassignedNum))
+	if item.Assignee == "" {
+		t.Error("expected assignee to be set after assign")
+	}
+	if item.Status != "in-progress" {
+		t.Errorf("expected status 'in-progress', got %q", item.Status)
+	}
+}
+
+// TestIntegration_CreateRejectsEmptyAssignee verifies the engine itself
+// rejects items with no assignee (not just the CLI layer).
+func TestIntegration_CreateRejectsEmptyAssignee(t *testing.T) {
+	eng := setupTestEngine(t)
+
+	_, err := eng.CreateItem("task", "No owner", "", "desc", "medium", "", nil)
+	if err == nil {
+		t.Fatal("CreateItem with empty assignee should fail")
+	}
+	if !strings.Contains(err.Error(), "assignee is required") {
+		t.Errorf("expected 'assignee is required', got: %v", err)
+	}
+}
+
+// TestIntegration_AllGuardsBlockUnassigned verifies every guarded operation
+// fails on unassigned items with the correct error.
+func TestIntegration_AllGuardsBlockUnassigned(t *testing.T) {
+	tmpDir := t.TempDir()
+	s := store.NewJSONStore(tmpDir)
+	_ = s.InitBoard("guard-test", nil)
+	eng := engine.New(s)
+	_ = eng.AddUser("user1", "human", "local")
+
+	// Create a blocker item (assigned)
+	blocker, _ := eng.CreateItem("task", "Blocker", "", "desc", "medium", "user1", nil)
+
+	// Create unassigned item via store
+	var itemID string
+	var itemNum int
+	_ = s.Transaction(func(board *domain.Board) error {
+		item := &domain.Item{
+			ID:          domain.GenerateID(),
+			DisplayNum:  board.NextDisplay,
+			Type:        "task",
+			Title:       "Unassigned",
+			Description: "no owner",
+			Status:      board.Columns[0].Name,
+			Priority:    "medium",
+		}
+		board.Items[item.ID] = item
+		board.DisplayMap[item.DisplayNum] = item.ID
+		board.NextDisplay++
+		itemID = item.ID
+		itemNum = item.DisplayNum
+		return nil
+	})
+
+	ref := fmt.Sprintf("%d", itemNum)
+	blockerRef := fmt.Sprintf("%d", blocker.DisplayNum)
+
+	tests := []struct {
+		name string
+		fn   func() error
+	}{
+		{"MoveItem", func() error { return eng.MoveItem(ref, "in-progress", "", "") }},
+		{"EditItem", func() error { return eng.EditItem(ref, "x", "", "", "", "") }},
+		{"BlockItem", func() error { return eng.BlockItem(ref, blockerRef, "", "") }},
+		{"UnblockItem", func() error { return eng.UnblockItem(ref, blockerRef, "", "") }},
+		{"DeleteItem", func() error { return eng.DeleteItem(ref, "", "") }},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			err := tc.fn()
+			if err == nil {
+				t.Fatalf("%s should fail on unassigned item", tc.name)
+			}
+			if !strings.Contains(err.Error(), "no assignee") {
+				t.Errorf("expected 'no assignee' error from %s, got: %v", tc.name, err)
+			}
+		})
+	}
+
+	// AssignItem should NOT be guarded
+	err := eng.AssignItem(ref, "user1", "", "")
+	if err != nil {
+		t.Fatalf("AssignItem should succeed on unassigned item: %v", err)
+	}
+
+	_ = itemID // used for ref
 }
