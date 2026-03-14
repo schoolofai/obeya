@@ -100,11 +100,17 @@ if git tag -l "$TAG" | grep -q "$TAG"; then
 fi
 echo "[ok] Tag ${TAG} is available"
 
-# 5. Tests pass
+# 5. Full test suite (build, vet, tests, golden files)
 echo ""
-echo "=== Running tests ==="
-go test ./...
+echo "=== Running full test suite ==="
+go build ./...
+echo "[ok] Build passes"
+go vet ./...
+echo "[ok] Vet passes"
+go test ./... -timeout 120s
 echo "[ok] Tests pass"
+go test ./internal/tui/ -run TestGolden -timeout 60s
+echo "[ok] Golden file snapshots pass"
 
 # Create and push tag
 echo ""
