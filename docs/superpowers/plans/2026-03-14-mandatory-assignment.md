@@ -24,6 +24,7 @@
 
 ```go
 // In engine_test.go — add at bottom of file
+// Add "strings" and "github.com/niladribose/obeya/internal/domain" to imports
 
 func TestCheckAssignee_Unassigned(t *testing.T) {
 	item := &domain.Item{DisplayNum: 5, Assignee: ""}
@@ -48,7 +49,53 @@ func TestCheckAssignee_Assigned(t *testing.T) {
 }
 ```
 
-Note: `CheckAssignee` is exported so tests can call it. Add `import "strings"` to engine_test.go if not already present, and `import "github.com/niladribose/obeya/internal/domain"`.
+Also add a `createUnassignedItem` test helper that bypasses engine validation by writing directly to the board via `store.Transaction`. This simulates legacy items that exist without assignees — needed by Tasks 2-3 to test guards:
+
+```go
+// createUnassignedItem inserts an item directly into the board without
+// going through engine.CreateItem, simulating legacy data with no assignee.
+func createUnassignedItem(t *testing.T, s store.Store, title string) *domain.Item {
+	t.Helper()
+	var created *domain.Item
+	err := s.Transaction(func(board *domain.Board) error {
+		item := &domain.Item{
+			ID:          domain.GenerateID(),
+			DisplayNum:  board.NextDisplay,
+			Type:        "task",
+			Title:       title,
+			Description: "test",
+			Status:      board.Columns[0].Name,
+			Priority:    "medium",
+			Assignee:    "", // deliberately unassigned
+		}
+		board.Items[item.ID] = item
+		board.DisplayMap[item.DisplayNum] = item.ID
+		board.NextDisplay++
+		created = item
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("createUnassignedItem failed: %v", err)
+	}
+	return created
+}
+```
+
+Update `setupEngine` to also return the store so tests can call `createUnassignedItem`:
+
+```go
+func setupEngine(t *testing.T) (*engine.Engine, store.Store) {
+	t.Helper()
+	dir := t.TempDir()
+	s := store.NewJSONStore(dir)
+	_ = s.InitBoard("test", nil)
+	eng := engine.New(s)
+	_ = eng.AddUser("testuser", "human", "local")
+	return eng, s
+}
+```
+
+**Important:** This changes `setupEngine`'s return signature. All existing callers must be updated from `eng := setupEngine(t)` to `eng, _ := setupEngine(t)` (or `eng, s := setupEngine(t)` when the store is needed). There are approximately 25-30 call sites in `engine_test.go`.
 
 - [ ] **Step 2: Run test to verify it fails**
 
@@ -98,17 +145,14 @@ git commit -m "feat: add CheckAssignee guard helper"
 
 - [ ] **Step 1: Write the failing test**
 
+Uses `createUnassignedItem` helper from Task 1 to simulate legacy data:
+
 ```go
 func TestMoveItem_UnassignedFails(t *testing.T) {
-	eng := setupEngine(t)
+	eng, s := setupEngine(t)
+	item := createUnassignedItem(t, s, "Unassigned task")
 
-	// Create item without assignee (engine allows this currently)
-	item, err := eng.CreateItem("task", "Unassigned task", "", "desc", "medium", "", nil)
-	if err != nil {
-		t.Fatalf("setup failed: %v", err)
-	}
-
-	err = eng.MoveItem(item.ID, "in-progress", "", "")
+	err := eng.MoveItem(item.ID, "in-progress", "", "")
 	if err == nil {
 		t.Fatal("expected error moving unassigned item")
 	}
@@ -139,24 +183,12 @@ if err := CheckAssignee(item); err != nil {
 Run: `go test ./internal/engine/ -run TestMoveItem_Unassigned -v`
 Expected: PASS
 
-- [ ] **Step 5: Fix existing tests that break**
+- [ ] **Step 5: Fix all existing tests for new setupEngine signature**
 
-Existing tests like `TestMoveItem` (line 101) create items without assignees. Update `setupEngine` or add a helper that creates items with a test assignee. Add a test user to the board in `setupEngine`:
-
-```go
-func setupEngine(t *testing.T) *engine.Engine {
-	t.Helper()
-	dir := t.TempDir()
-	s := store.NewJSONStore(dir)
-	_ = s.InitBoard("test", nil)
-	eng := engine.New(s)
-	// Register a test user for assignee validation
-	_ = eng.AddUser("testuser", "human", "local")
-	return eng
-}
-```
-
-Then update all existing `CreateItem` calls in the test file to pass `"testuser"` as the assignee parameter instead of `""`. There are approximately 15-20 calls to update.
+The `setupEngine` change from Task 1 returns `(*engine.Engine, store.Store)`. Update ALL existing callers:
+- Change `eng := setupEngine(t)` to `eng, _ := setupEngine(t)` everywhere
+- Also update all existing `CreateItem` calls to pass `"testuser"` as the assignee parameter instead of `""` — there are approximately 25-30 calls across the entire test file
+- Also update any `MoveItem` calls that use items created without assignees
 
 Run: `go test ./internal/engine/ -v`
 Expected: ALL tests pass
@@ -178,10 +210,12 @@ git commit -m "feat: add assignee guard to MoveItem"
 
 - [ ] **Step 1: Write failing tests for all four methods**
 
+All tests use `createUnassignedItem` to simulate legacy data, so they work regardless of whether `CreateItem` enforces assignment:
+
 ```go
 func TestEditItem_UnassignedFails(t *testing.T) {
-	eng := setupEngine(t)
-	item, _ := eng.CreateItem("task", "Test", "", "desc", "medium", "", nil)
+	eng, s := setupEngine(t)
+	item := createUnassignedItem(t, s, "Test")
 	err := eng.EditItem(item.ID, "New title", "", "", "", "")
 	if err == nil {
 		t.Fatal("expected error editing unassigned item")
@@ -192,9 +226,9 @@ func TestEditItem_UnassignedFails(t *testing.T) {
 }
 
 func TestBlockItem_UnassignedFails(t *testing.T) {
-	eng := setupEngine(t)
+	eng, s := setupEngine(t)
 	item1, _ := eng.CreateItem("task", "Task1", "", "desc", "medium", "testuser", nil)
-	item2, _ := eng.CreateItem("task", "Task2", "", "desc", "medium", "", nil)
+	item2 := createUnassignedItem(t, s, "Task2")
 	err := eng.BlockItem(item2.ID, item1.ID, "", "")
 	if err == nil {
 		t.Fatal("expected error blocking unassigned item")
@@ -202,11 +236,9 @@ func TestBlockItem_UnassignedFails(t *testing.T) {
 }
 
 func TestUnblockItem_UnassignedFails(t *testing.T) {
-	eng := setupEngine(t)
-	// Create assigned item, block it, then remove assignee manually is complex.
-	// Instead: create without assignee, try to unblock — should fail.
+	eng, s := setupEngine(t)
 	item1, _ := eng.CreateItem("task", "Task1", "", "desc", "medium", "testuser", nil)
-	item2, _ := eng.CreateItem("task", "Task2", "", "desc", "medium", "", nil)
+	item2 := createUnassignedItem(t, s, "Task2")
 	err := eng.UnblockItem(item2.ID, item1.ID, "", "")
 	if err == nil {
 		t.Fatal("expected error unblocking unassigned item")
@@ -214,16 +246,14 @@ func TestUnblockItem_UnassignedFails(t *testing.T) {
 }
 
 func TestDeleteItem_UnassignedFails(t *testing.T) {
-	eng := setupEngine(t)
-	item, _ := eng.CreateItem("task", "Test", "", "desc", "medium", "", nil)
+	eng, s := setupEngine(t)
+	item := createUnassignedItem(t, s, "Test")
 	err := eng.DeleteItem(item.ID, "", "")
 	if err == nil {
 		t.Fatal("expected error deleting unassigned item")
 	}
 }
 ```
-
-Note: the test for `EditItem_UnassignedFails` creates an item without assignee — this will still work because the engine's `CreateItem` doesn't enforce assignee yet (that's Task 5). The guard is on the edit/block/unblock/delete operations.
 
 - [ ] **Step 2: Run tests to verify they fail**
 
@@ -255,7 +285,7 @@ if err := CheckAssignee(item); err != nil {
 }
 ```
 
-**DeleteItem** (line 160): after `item := board.Items[id]` (line 171):
+**DeleteItem** (line 160): after `item := board.Items[id]` (line 170):
 ```go
 if err := CheckAssignee(item); err != nil {
     return err
@@ -314,24 +344,42 @@ func TestCreateItem_UnknownAssigneeFails(t *testing.T) {
 Run: `go test ./internal/engine/ -run "TestCreateItem_.*Assignee" -v`
 Expected: `TestCreateItem_UnknownAssigneeFails` fails (create succeeds with any string)
 
-- [ ] **Step 3: Add ResolveUserID to CreateItem**
+- [ ] **Step 3: Add mandatory assignee + ResolveUserID to CreateItem**
 
 In `internal/engine/engine.go`, inside `CreateItem`'s transaction callback (line 33), after resolving parent and before `buildItem`:
 
 ```go
-var resolvedAssignee string
-if assignee != "" {
-    resolved, err := board.ResolveUserID(assignee)
-    if err != nil {
-        return fmt.Errorf("unknown assignee %q: %w\nRun 'ob user list' to see registered users", assignee, err)
-    }
-    resolvedAssignee = resolved
+// Mandatory assignee — enforce at engine level, not just CLI
+if assignee == "" {
+    return fmt.Errorf("assignee is required. Every item must have an owner.\n\n" +
+        "Run 'ob user list' to see registered users.")
+}
+resolvedAssignee, err := board.ResolveUserID(assignee)
+if err != nil {
+    return fmt.Errorf("unknown assignee %q: %w\nRun 'ob user list' to see registered users", assignee, err)
 }
 
 item := buildItem(board, itemType, title, description, priority, resolvedAssignee, parentID, tags)
 ```
 
 Replace the existing `buildItem` call (line 39) with the version that uses `resolvedAssignee` instead of raw `assignee`.
+
+**Important:** This enforces mandatory assignment at the engine level — not just the CLI. Direct API callers (future SDKs, tests) cannot bypass it. The `createUnassignedItem` test helper from Task 1 bypasses this intentionally to simulate legacy data.
+
+Also add a test for empty assignee at engine level:
+
+```go
+func TestCreateItem_EmptyAssigneeFails(t *testing.T) {
+	eng, _ := setupEngine(t)
+	_, err := eng.CreateItem("task", "Test", "", "desc", "medium", "", nil)
+	if err == nil {
+		t.Fatal("expected error for empty assignee")
+	}
+	if !strings.Contains(err.Error(), "assignee is required") {
+		t.Errorf("expected 'assignee is required' error, got: %v", err)
+	}
+}
+```
 
 - [ ] **Step 4: Run tests to verify all pass**
 
