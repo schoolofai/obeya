@@ -28,12 +28,12 @@ export function handleError(err: unknown): NextResponse {
       { status: err.statusCode }
     );
   }
-  const errMsg = err instanceof Error ? err.message : String(err);
-  console.error("Unhandled error:", errMsg, err);
+  const rawMsg = err instanceof Error ? err.message : String(err);
+  console.error("Unhandled error:", rawMsg, err);
   return NextResponse.json(
     {
       ok: false,
-      error: { code: ErrorCode.INTERNAL_ERROR, message: errMsg },
+      error: { code: ErrorCode.INTERNAL_ERROR, message: "Internal server error" },
     },
     { status: 500 }
   );
