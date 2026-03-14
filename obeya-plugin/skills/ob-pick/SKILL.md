@@ -19,7 +19,9 @@ Claim an unassigned task and move it to in-progress.
    - On a shared board with multiple projects, prefer tasks whose `project` field matches the current project unless the user requests otherwise
    - The current project name is derived from the git remote (`org/repo` format) or the directory name as fallback — check items' `project` field against this
 4. Pick the highest-priority eligible task
-5. Run `ob move <id> in-progress` to claim it
+5. **Assign-then-move** — ensure the item has an assignee before moving:
+   - If the item is unassigned, run `ob assign <id> --to <self>` first (determine your identity via `--as` flag or `ob user list --format json`)
+   - Then run `ob move <id> in-progress`
 6. Display the picked task details to the user (include `project` field on shared boards)
 7. If no eligible tasks, tell the user
 
@@ -51,6 +53,6 @@ Surface any plan linked to this task so the agent has design context:
    - Match the task title against plan headings and show the **most relevant section**
 5. If not linked, say "No plan linked to this task" and explain what was checked (this reasoning helps the user understand)
 
-## Environment
+## Identity
 
-Set `OB_USER` to your user ID before running commands, or pass `--as <id>`.
+Determine your identity via the `--as <id>` flag or by running `ob user list --format json`. The `--as` flag is used for audit trail (who ran the command), not for ownership — ownership is set via `ob assign`.

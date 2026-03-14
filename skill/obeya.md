@@ -4,14 +4,15 @@ You have access to the `ob` CLI tool for managing a Kanban board. Use it to trac
 
 ## Setup
 
-Before using any board commands, set your identity via environment variables:
+Before using any board commands, establish your identity:
 
 ```bash
-export OB_USER=<your-user-id>       # Your registered user ID (hash or display number)
-export OB_SESSION=<unique-session-id> # Unique identifier for this session
+# Pass identity on each command via flags
+--as <user-id>           # Your registered user ID (for audit trail — who ran the command)
+--session <session-id>   # Unique identifier for this session
 ```
 
-Alternatively, pass `--as <user-id>` and `--session <session-id>` flags on each command.
+Discover your user ID with `ob user list --format json`. Use `--as` and `--session` flags on each command, or set `OB_SESSION` as an environment variable for convenience.
 
 Discover the current board state before starting work:
 
@@ -70,23 +71,23 @@ ob user remove b3a
 Items follow a hierarchy: **Epic > Story > Task**. Nesting is flexible — use `-p` to set a parent.
 
 ```bash
-# Create an epic (top-level container)
-ob create epic "User Authentication System"
+# Create an epic (top-level container) — --assign is mandatory
+ob create epic "User Authentication System" --assign b3a
 
 # Create a story under an epic
-ob create story "Login Flow" -p 1
+ob create story "Login Flow" -p 1 --assign b3a
 
 # Create a task under a story
-ob create task "Add JWT validation" -p 2
+ob create task "Add JWT validation" -p 2 --assign b3a
 
 # Create a task with all flags
 ob create task "Write unit tests" -p 2 --priority high --assign b3a --tag backend -d "Cover edge cases for token expiry"
 ```
 
 **Flags:**
+- `--assign <user-id>` — **REQUIRED.** Every item must have an assignee. The engine rejects items without one.
 - `-p <parent-id>` — Parent item (by display number or hash prefix)
 - `--priority <level>` — One of: `low`, `medium`, `high`, `critical`
-- `--assign <user-id>` — Assign to a user on creation
 - `--tag <name>` — Add a freeform tag (repeatable)
 - `-d <text>` — Description text
 
@@ -212,7 +213,8 @@ Follow this workflow during every coding session:
 ### 1. Session Start — Check Assigned Work
 
 ```bash
-ob list --assignee $OB_USER --format json
+ob user list --format json                    # Find your user ID
+ob list --assignee <your-user-id> --format json  # List your items
 ```
 
 Review your assigned items. Identify what to work on next based on priority and status.
@@ -227,10 +229,11 @@ Only move items assigned to you (especially if you are a contributor).
 
 ### 3. Create Subtasks During Work
 
-Break down complex work into subtasks as you discover them:
+Break down complex work into subtasks as you discover them. `--assign` is mandatory — read the parent's assignee or use your own ID:
 
 ```bash
-ob create task "Extract helper function" -p <parent-id> --assign $OB_USER --tag refactor
+ob show <parent-id> --format json             # Read parent's assignee
+ob create task "Extract helper function" -p <parent-id> --assign <user-id> --tag refactor
 ```
 
 ### 4. Report Blockers
@@ -285,7 +288,7 @@ TASKEOF
 2. Create the task with the description file:
 
 ```bash
-ob create task "Add JWT validation" -p 2 --body-file /tmp/task-desc.md --priority high
+ob create task "Add JWT validation" -p 2 --assign b3a --body-file /tmp/task-desc.md --priority high
 ```
 
 Short one-line descriptions (via `-d`) are acceptable only for trivial tasks. For any task that another agent might pick up, use `--body-file` with full context.

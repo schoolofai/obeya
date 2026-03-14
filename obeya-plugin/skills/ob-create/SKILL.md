@@ -14,15 +14,20 @@ Create a new standalone item on the Obeya board.
 
 - `type`: epic, story, or task
 - `title`: the item title
-- Optional flags: `--priority <low|medium|high|critical>`, `--description "<text>"`, `--assign <user>`, `--tag "<tags>"`
+- **Required flag**: `--assign <user>` — every item must have an assignee. The engine rejects items without one.
+- Optional flags: `--priority <low|medium|high|critical>`, `--description "<text>"`, `--tag "<tags>"`
 
 ## Steps
 
-1. Parse `$ARGUMENTS` for type, title, and optional flags
+1. Parse `$ARGUMENTS` for type, title, and flags
 2. If type is missing, ask the user: "What type? (epic / story / task)"
 3. If title is missing, ask the user for a title
-4. Run `ob create <type> "<title>" [flags]`
-5. Display the created item with its ID and display number
+4. **Determine the assignee** — `--assign` is mandatory:
+   - If `--assign` was provided in arguments, use it
+   - Otherwise, determine the current user via `--as` flag or `ob user list --format json`
+   - If still ambiguous, ask the user: "Who should this be assigned to?"
+5. Run `ob create <type> "<title>" --assign <user> [flags]`
+6. Display the created item with its ID and display number
 
 ## Shared Board Awareness
 

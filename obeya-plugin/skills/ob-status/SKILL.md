@@ -15,8 +15,9 @@ Display all items assigned to the current user/agent.
    - Otherwise check for `.obeya/board.json` → local board
    - Display: `Board: local` or `Board: linked → <name> (shared)`
 2. Determine the current user:
-   - Check `OB_USER` environment variable
-   - If not set, run `ob user list --format json` and identify the likely current user
+   - Use the `--as <id>` flag if provided
+   - Otherwise, run `ob user list --format json` and identify the likely current user
+   - If ambiguous, ask the user: "Which user are you?"
 3. Run `ob list --format json` and filter to items where `assignee` matches the current user
 4. Group by status and display:
    - In-progress items first (what you're actively working on)

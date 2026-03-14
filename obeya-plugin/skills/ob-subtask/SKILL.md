@@ -15,7 +15,8 @@ Create a child item under a parent on the Obeya board.
 - `parent`: optional display number of the parent item (e.g. `15`)
 - `type`: optional item type — epic, story, or task (defaults to `task`)
 - `title`: the item title
-- Optional flags: `--priority <low|medium|high|critical>`, `--description "<text>"`, `--assign <user>`, `--tag "<tags>"`
+- **Required flag**: `--assign <user>` — every item must have an assignee. The engine rejects items without one. If not provided, the parent's assignee is inherited (see Steps below).
+- Optional flags: `--priority <low|medium|high|critical>`, `--description "<text>"`, `--tag "<tags>"`
 
 **Examples:**
 - `/ob-subtask 15 "Fix login redirect"` → task under #15
@@ -32,8 +33,13 @@ Create a child item under a parent on the Obeya board.
    - If no type specified, default to `task`
 2. If title is missing, ask the user for a title
 3. If parent not provided, use the current in-progress item. If ambiguous, ask the user.
-4. Run `ob create <type> "<title>" -p <parent-id> [flags]`
-5. Display the created item with its ID, display number, and parent relationship
+4. **Determine the assignee** — `--assign` is mandatory:
+   - If `--assign` was provided in arguments, use it
+   - Otherwise, read the parent's assignee: run `ob show <parent-id> --format json` and extract the `assignee` field
+   - If the parent has an assignee, pass it as `--assign <parent-assignee>`
+   - If the parent has no assignee, determine the current user via `--as` flag or `ob user list --format json`, or ask the user
+5. Run `ob create <type> "<title>" -p <parent-id> --assign <user> [flags]`
+6. Display the created item with its ID, display number, and parent relationship
 
 ## Description Quality (REQUIRED)
 

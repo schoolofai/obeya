@@ -11,7 +11,7 @@ Mark the current in-progress task as done and show what's next.
 ## Steps
 
 1. Run `ob list --status in-progress --format json` to find in-progress items
-2. If using `OB_USER`, filter to items assigned to the current user
+2. Filter to items assigned to the current user (determine identity via `--as` flag or `ob user list --format json`)
 3. If exactly one in-progress task: run `ob move <id> done`
 4. If multiple in-progress tasks: show them and ask the user which to complete
 5. If `$ARGUMENTS` is provided, use it as the task ID: run `ob move $ARGUMENTS done`
