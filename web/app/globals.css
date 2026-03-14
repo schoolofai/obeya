@@ -1,26 +1,38 @@
 @import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg-primary: #0d1117;
+  --bg-secondary: #161b22;
+  --bg-tertiary: #21262d;
+  --border-default: #30363d;
+  --border-active: #58a6ff;
+  --text-primary: #c9d1d9;
+  --text-secondary: #8b949e;
+  --text-faint: #484f58;
+  --color-epic: #bc8cff;
+  --color-story: #58a6ff;
+  --color-task: #8b949e;
+  --color-critical: #f85149;
+  --color-high: #f85149;
+  --color-medium: #e3b341;
+  --color-low: #3fb950;
+  --color-accent: #7aa2f7;
+  --color-assignee: #58a6ff;
+  --color-unassigned: #f85149;
+  --background: #0d1117;
+  --foreground: #c9d1d9;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-sans: 'JetBrains Mono', monospace;
+  --font-mono: 'JetBrains Mono', monospace;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'JetBrains Mono', monospace;
 }
