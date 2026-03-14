@@ -36,7 +36,7 @@ Read the plan content and identify:
 ### 3. Create the Epic
 
 ```
-ob create epic "<goal title>" --description "<description>"
+ob create epic "<goal title>" --assign <current-user> --description "<description>"
 ```
 
 The epic description must include:
@@ -54,7 +54,7 @@ Link to plan: `ob plan link <plan-id> --to <epic-id>`
 For each major deliverable:
 
 ```
-ob create story "<deliverable title>" -p <epic-id> --description "<description>"
+ob create story "<deliverable title>" -p <epic-id> --assign <current-user> --description "<description>"
 ```
 
 Story descriptions must include:
@@ -70,7 +70,7 @@ Link to plan: `ob plan link <plan-id> --to <story-id>`
 For each atomic implementation step:
 
 ```
-ob create task "<step title>" -p <story-id> --description "<description>"
+ob create task "<step title>" -p <story-id> --assign <current-user> --description "<description>"
 ```
 
 Task descriptions MUST be self-contained. Use these named headers so agents can scan them:
