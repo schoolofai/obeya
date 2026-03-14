@@ -24,7 +24,7 @@ Display complete details of a board item.
 3. Run `ob show <id> --format json`
 4. Display the item details in a readable format:
    - **Header**: `#<display_num> — <title>` with type badge (epic/story/task)
-   - **Status**: current column, priority, assignee
+   - **Status**: current column, priority, assignee (display `Assignee: @unassigned` when the assignee field is empty)
    - **Project**: if on a shared board, show the item's `project` field (which project owns this item)
    - **Description**: full text
    - **Parent**: if this is a child item, show the parent's title and ID
