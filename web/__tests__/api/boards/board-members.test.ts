@@ -19,11 +19,16 @@ vi.mock("@/lib/permissions", () => ({
   BOARD_ROLE_LEVEL: { viewer: 1, editor: 2, owner: 3 },
 }));
 
+vi.mock("@/lib/appwrite/sync-permissions", () => ({
+  syncBoardPermissions: vi.fn().mockResolvedValue(1),
+}));
+
 import { GET, POST } from "@/app/api/boards/[id]/members/route";
 import { PATCH, DELETE } from "@/app/api/boards/[id]/members/[uid]/route";
 import { authenticate } from "@/lib/auth/middleware";
 import { getDatabases } from "@/lib/appwrite/server";
 import { requireBoardAccess } from "@/lib/permissions";
+import { syncBoardPermissions } from "@/lib/appwrite/sync-permissions";
 
 type MembersContext = { params: Promise<{ id: string }> };
 type MemberContext = { params: Promise<{ id: string; uid: string }> };
@@ -99,6 +104,7 @@ describe("POST /api/boards/:id/members", () => {
     expect(response.status).toBe(201);
     expect(body.data.user_id).toBe("user-2");
     expect(requireBoardAccess).toHaveBeenCalledWith("user-1", "board-1", null, "owner");
+    expect(syncBoardPermissions).toHaveBeenCalledWith("board-1");
   });
 
   it("returns 409 when member already exists", async () => {

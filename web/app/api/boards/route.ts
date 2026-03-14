@@ -7,6 +7,7 @@ import { ok, handleError } from "@/lib/response";
 import { validateBody } from "@/lib/validation";
 import { createBoardSchema } from "@/lib/boards/schemas";
 import { deserializeBoard, serializeColumns } from "@/lib/boards/serialize";
+import { buildBoardPermissions } from "@/lib/appwrite/doc-permissions";
 
 export async function GET(request: Request) {
   try {
@@ -78,6 +79,8 @@ async function createBoard(userId: string, input: any) {
   const env = getEnv();
   const now = new Date().toISOString();
 
+  const permissions = buildBoardPermissions(userId, []);
+
   const doc = await db.createDocument(
     env.APPWRITE_DATABASE_ID,
     COLLECTIONS.BOARDS,
@@ -95,7 +98,8 @@ async function createBoard(userId: string, input: any) {
       version: 1,
       created_at: now,
       updated_at: now,
-    }
+    },
+    permissions,
   );
 
   return deserializeBoard(doc);

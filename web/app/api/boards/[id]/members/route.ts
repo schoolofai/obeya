@@ -8,6 +8,7 @@ import { ok, handleError } from "@/lib/response";
 import { validateBody, validateParams } from "@/lib/validation";
 import { requireBoardAccess } from "@/lib/permissions";
 import { AppError, ErrorCode } from "@/lib/errors";
+import { syncBoardPermissions } from "@/lib/appwrite/sync-permissions";
 
 const paramsSchema = z.object({ id: z.string().min(1) });
 
@@ -53,6 +54,8 @@ export async function POST(request: Request, context: RouteContext) {
       ID.unique(),
       { user_id: input.user_id, board_id: id, role: input.role }
     );
+
+    await syncBoardPermissions(id);
 
     return ok(member, { status: 201 });
   } catch (err) {

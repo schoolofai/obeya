@@ -90,6 +90,13 @@ describe("POST /api/boards", () => {
     expect(body.ok).toBe(true);
     expect(body.data.name).toBe("Sprint Board");
     expect(body.data.id).toBe("board-new");
+
+    // Verify permissions were passed to createDocument
+    const callArgs = mockDb.createDocument.mock.calls[0];
+    const permissions = callArgs[4];
+    expect(permissions).toContain('read("user:user-1")');
+    expect(permissions).toContain('update("user:user-1")');
+    expect(permissions).toContain('delete("user:user-1")');
   });
 
   it("returns 400 for missing board name", async () => {

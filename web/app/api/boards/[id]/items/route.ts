@@ -9,6 +9,7 @@ import { ok, handleError } from "@/lib/response";
 import { validateBody } from "@/lib/validation";
 import { createItemSchema } from "@/lib/items/schemas";
 import { deserializeItem, serializeItem } from "@/lib/items/serialize";
+import { buildItemPermissions, fetchBoardMemberList } from "@/lib/appwrite/doc-permissions";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -62,6 +63,10 @@ async function createItem(boardId: string, displayNum: number, input: ReturnType
   const env = getEnv();
   const now = new Date().toISOString();
 
+  const board = await db.getDocument(env.APPWRITE_DATABASE_ID, COLLECTIONS.BOARDS, boardId);
+  const members = await fetchBoardMemberList(boardId);
+  const permissions = buildItemPermissions(board.owner_id as string, members);
+
   const serialized = serializeItem({
     board_id: boardId,
     display_num: displayNum,
@@ -79,7 +84,7 @@ async function createItem(boardId: string, displayNum: number, input: ReturnType
     updated_at: now,
   });
 
-  const itemDoc = await db.createDocument(env.APPWRITE_DATABASE_ID, COLLECTIONS.ITEMS, ID.unique(), serialized);
+  const itemDoc = await db.createDocument(env.APPWRITE_DATABASE_ID, COLLECTIONS.ITEMS, ID.unique(), serialized, permissions);
   return deserializeItem(itemDoc);
 }
 

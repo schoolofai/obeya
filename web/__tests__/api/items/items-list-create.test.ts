@@ -78,7 +78,8 @@ describe("POST /api/boards/:id/items", () => {
         parent_id: null, assignee_id: null, blocked_by: "[]", tags: "[]",
         project: null, created_at: now, updated_at: now,
       }),
-      getDocument: vi.fn().mockResolvedValue({ $id: "board-1", display_map: "{}" }),
+      getDocument: vi.fn().mockResolvedValue({ $id: "board-1", owner_id: "user-1", display_map: "{}" }),
+      listDocuments: vi.fn().mockResolvedValue({ total: 0, documents: [] }),
       updateDocument: vi.fn().mockResolvedValue({}),
     };
     vi.mocked(getDatabases).mockReturnValue(mockDb as any);
@@ -97,6 +98,13 @@ describe("POST /api/boards/:id/items", () => {
     expect(body.data.display_num).toBe(5);
     expect(body.data.id).toBe("item-new");
     expect(incrementDisplayCounter).toHaveBeenCalledWith("board-1");
+
+    // Verify permissions were passed to createDocument
+    const createArgs = mockDb.createDocument.mock.calls[0];
+    const permissions = createArgs[4];
+    expect(permissions).toContain('read("user:user-1")');
+    expect(permissions).toContain('update("user:user-1")');
+    expect(permissions).toContain('delete("user:user-1")');
   });
 
   it("returns 400 for missing required fields", async () => {
