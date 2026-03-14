@@ -60,6 +60,8 @@ If you are an agent, assign yourself:
 Run 'ob user list' to see registered users.
 ```
 
+The `--assign` value must resolve to a registered board user via `board.ResolveUserID()`. If the user does not exist, hard fail with an error listing registered users. This matches the existing behavior of `ob assign` and prevents storing dangling references.
+
 **Pseudocode:**
 
 ```go
@@ -68,13 +70,15 @@ func runCreate(cmd *cobra.Command, args []string) {
         fmt.Fprintf(os.Stderr, mandatoryAssignError)
         os.Exit(1)
     }
+    // engine.CreateItem must resolve assignee via board.ResolveUserID()
+    // and return an error if the user is not registered.
     // ... existing create logic
 }
 ```
 
 ### 2. Assignee guard on all state-change commands
 
-**Files:** `cmd/move.go`, `cmd/edit.go`, `cmd/done.go` (or centralized in `engine.go`)
+**Location:** Centralized in `engine.go`, inside each method's `Transaction` callback.
 
 Before any state-change operation, check that the target item has an assignee. If not, hard fail:
 
@@ -90,31 +94,44 @@ Examples:
 Run 'ob user list' to see registered users.
 ```
 
-**Pseudocode:**
+The assignee check must happen **inside** the existing `store.Transaction()` callback of each guarded method — not as a separate pre-check — to avoid TOCTOU races and double board reads.
+
+**Pseudocode (inside a transaction callback):**
 
 ```go
-func (e *Engine) guardAssignee(itemID string) error {
-    board, err := e.store.Load()
-    if err != nil {
-        return err
-    }
-    item := board.Items[itemID]
-    if item.Assignee == "" {
-        return fmt.Errorf("item #%d has no assignee. Run: ob assign %d --to <user>",
-            item.DisplayNum, item.DisplayNum)
-    }
-    return nil
+// Example: inside MoveItem's Transaction callback
+func (e *Engine) MoveItem(ref, status, userID, sessionID string) error {
+    return e.store.Transaction(func(board *domain.Board) error {
+        id, err := board.ResolveID(ref)
+        if err != nil {
+            return err
+        }
+        item := board.Items[id]
+
+        // Assignee guard — inline, inside the transaction
+        if item.Assignee == "" {
+            return fmt.Errorf("item #%d has no assignee. Run: ob assign %d --to <user>",
+                item.DisplayNum, item.DisplayNum)
+        }
+
+        // ... existing move logic
+    })
 }
 ```
+
+A shared helper `checkAssignee(item *domain.Item) error` can be extracted for reuse across methods, but it must be called from within the transaction, not before it.
 
 Commands guarded:
 
 | Command | Guard |
 |---------|-------|
 | `ob move <id> <status>` | Assignee must be set |
-| `ob edit <id>` | Assignee must be set |
+| `ob edit <id>` | Assignee must be set. Note: `ob edit` does NOT gain an `--assign` flag — use `ob assign` for reassignment. |
 | `ob block <id>` | Assignee must be set |
-| `ob done <id>` (alias for move done) | Assignee must be set |
+| `ob unblock <id>` | Assignee must be set |
+| `ob delete <id>` | Assignee must be set (prevents silent cleanup of orphaned items — assign first, then delete intentionally) |
+
+Note: there is no `cmd/done.go` — "done" is achieved via `ob move <id> done`, which is covered by the `MoveItem` guard above.
 
 Commands NOT guarded (read-only or assignment itself):
 
@@ -219,7 +236,8 @@ Each skill needs updates to work with mandatory assignment and dropped `OB_USER`
 #### `ob-subtask` skill
 
 - Same as `ob-create` — `--assign` is mandatory on the underlying `ob create` call
-- Instruct: inherit parent's assignee unless explicitly overridden
+- Instruct: read the parent item's assignee (via `ob show <parent> --format json`) and explicitly pass it as `--assign <parent-assignee>` in the generated `ob create` command, unless the user specifies a different assignee
+- There is no automatic CLI-level inheritance — the skill must always pass `--assign` explicitly
 
 #### `ob-pick` skill
 
@@ -301,10 +319,15 @@ Existing boards will have items without assignees. These are handled by:
 ### CLI tests
 
 - `ob create task "x"` without `--assign` → exit code 1, error message
-- `ob create task "x" --assign claude` → success, assignee set
+- `ob create task "x" --assign claude` → success, assignee set and resolved via `ResolveUserID`
+- `ob create task "x" --assign nonexistent` → exit code 1, error: user not found
 - `ob move #5 in-progress` on unassigned item → exit code 1, error message
 - `ob move #5 in-progress` on assigned item → success
-- `ob assign #5 --to claude` on unassigned item → success
+- `ob edit #5 --description "x"` on unassigned item → exit code 1, error message
+- `ob block #5 --by #3` on unassigned item → exit code 1, error message
+- `ob unblock #5` on unassigned item → exit code 1, error message
+- `ob delete #5` on unassigned item → exit code 1, error message
+- `ob assign #5 --to claude` on unassigned item → success (this IS the fix)
 - `OB_USER` set → deprecation warning on stderr
 
 ### TUI tests (teatest)
@@ -321,15 +344,17 @@ Existing boards will have items without assignees. These are handled by:
 
 | File | Change |
 |------|--------|
-| `cmd/create.go` | Mandatory `--assign` validation |
-| `cmd/helpers.go` | Drop `OB_USER`, add deprecation warning |
-| `internal/engine/engine.go` | `guardAssignee()` on state-change methods |
+| `cmd/create.go` | Mandatory `--assign` validation + user resolution via `board.ResolveUserID()` |
+| `cmd/helpers.go` | Drop `OB_USER` from `getUserID()`, add deprecation warning |
+| `cmd/root.go` | Remove `OB_USER` reference from `--as` flag help text |
+| `internal/engine/engine.go` | Inline assignee guard in `MoveItem`, `EditItem`, `BlockItem`, `UnblockItem`, `DeleteItem` transaction callbacks. Add `ResolveUserID` call in `CreateItem`. |
 | `internal/tui/card.go` | `@unassigned` rendering |
 | `internal/tui/styles.go` | `unassignedStyle` definition |
 | `internal/tui/card_test.go` | Tests for unassigned rendering |
-| Skills: ob-create | Mandatory `--assign` instructions |
-| Skills: ob-subtask | Mandatory `--assign` instructions |
-| Skills: ob-pick | Assign-then-move flow |
-| Skills: ob-status | Drop `OB_USER`, use `--as` |
+| `skill/obeya.md` | Remove all `OB_USER` / `$OB_USER` references |
+| Skills: ob-create | Mandatory `--assign` instructions, remove `OB_USER` |
+| Skills: ob-subtask | Mandatory `--assign` with explicit parent-assignee lookup |
+| Skills: ob-pick | Assign-then-move flow, remove `OB_USER` |
+| Skills: ob-status | Drop `OB_USER` detection, use `--as` for identity |
 | Skills: ob-done | Drop `OB_USER` reference |
 | Skills: ob-show | Display `unassigned` label |
