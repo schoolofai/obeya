@@ -30,7 +30,12 @@ func register(a AgentSetup) {
 func Get(name string) (AgentSetup, error) {
 	a, ok := registry[name]
 	if !ok {
-		return nil, fmt.Errorf("unsupported agent %q. Supported: %s", name, strings.Join(SupportedNames(), ", "))
+		return nil, fmt.Errorf(
+			"unsupported agent %q.\n\n"+
+				"Only Claude Code is currently supported as a first-class agent.\n"+
+				"Supported agents: %s\n\n"+
+				"Other agents (cursor, windsurf, copilot, etc.) are not yet supported.",
+			name, strings.Join(SupportedNames(), ", "))
 	}
 	return a, nil
 }

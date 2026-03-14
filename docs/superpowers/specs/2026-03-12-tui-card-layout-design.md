@@ -111,7 +111,7 @@ Two changes to the card rendering in `internal/tui/board.go`:
 ### New Functions
 
 - `wrapText(s string, maxWidth int) []string` — word-wraps a string into lines that fit within `maxWidth` characters. Breaks on word boundaries when possible, mid-word only when a single word exceeds `maxWidth`. Handles empty strings (returns `[]string{""}`).
-- `renderDescription(desc string, maxWidth int, scrollY int, maxLines int) string` — word-wraps the description, applies the scroll offset, takes `maxLines` lines, and appends scroll indicators if content exists above or below the viewport.
+- `renderDescription(desc string, maxWidth int, scrollY int, maxLines int) []string` — word-wraps the description, applies the scroll offset, takes `maxLines` lines, and appends scroll indicators if content exists above or below the viewport. Returns a slice of styled lines for appending to the card's line list.
 
 ### State Changes to `App` struct
 

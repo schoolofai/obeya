@@ -4,14 +4,19 @@ import (
 	"fmt"
 )
 
+// cloudStoreResolver is set by resolve_cloud.go when built with -tags cloud.
+// Returns (Store, error). If Store is nil and error is nil, falls through to JSONStore.
+var cloudStoreResolver func(rootDir, credsPath string) (Store, error)
+
 // NewStore resolves the appropriate Store implementation based on project configuration.
-// If .obeya/cloud.json exists in rootDir, returns a CloudStore.
-// Otherwise, returns a JSONStore.
-// The credsPath parameter specifies where to find credentials. Pass empty string
-// to use the default (~/.obeya/credentials.json).
+// Without the cloud build tag, always returns a JSONStore.
+// With -tags cloud: if .obeya/cloud.json exists in rootDir, returns a CloudStore.
 func NewStore(rootDir, credsPath string) (Store, error) {
-	if CloudConfigExists(rootDir) {
-		return newCloudStoreFromConfig(rootDir, credsPath)
+	if cloudStoreResolver != nil {
+		s, err := cloudStoreResolver(rootDir, credsPath)
+		if s != nil || err != nil {
+			return s, err
+		}
 	}
 
 	return NewJSONStore(rootDir), nil

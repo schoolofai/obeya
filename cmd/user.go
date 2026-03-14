@@ -41,7 +41,7 @@ var (
 
 func init() {
 	userAddCmd.Flags().StringVar(&flagUserType, "type", "human", "user type: human or agent")
-	userAddCmd.Flags().StringVar(&flagUserProvider, "provider", "local", "provider: local, claude-code, opencode, codex")
+	userAddCmd.Flags().StringVar(&flagUserProvider, "provider", "local", "identity provider. Supported: 'local' (human), 'claude-code' (agent). Other providers are not yet supported.")
 
 	userCmd.AddCommand(userAddCmd, userListCmd, userRemoveCmd)
 	rootCmd.AddCommand(userCmd)
