@@ -430,3 +430,18 @@ func buildReorderedColumns(board *domain.Board, names []string) ([]domain.Column
 	}
 	return reordered, nil
 }
+
+// CheckAssignee returns an error if the item has no assignee.
+// Must be called inside a Transaction callback.
+func CheckAssignee(item *domain.Item) error {
+	if item.Assignee == "" {
+		return fmt.Errorf("item #%d has no assignee. Assign it first:\n\n"+
+			"  ob assign %d --to <user>\n\n"+
+			"Examples:\n"+
+			"  ob assign %d --to claude\n"+
+			"  ob assign %d --to niladri\n\n"+
+			"Run 'ob user list' to see registered users.",
+			item.DisplayNum, item.DisplayNum, item.DisplayNum, item.DisplayNum)
+	}
+	return nil
+}

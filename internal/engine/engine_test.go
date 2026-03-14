@@ -1,22 +1,52 @@
 package engine_test
 
 import (
+	"strings"
 	"testing"
 
+	"github.com/niladribose/obeya/internal/domain"
 	"github.com/niladribose/obeya/internal/engine"
 	"github.com/niladribose/obeya/internal/store"
 )
 
-func setupEngine(t *testing.T) *engine.Engine {
+func setupEngine(t *testing.T) (*engine.Engine, store.Store) {
 	t.Helper()
 	dir := t.TempDir()
 	s := store.NewJSONStore(dir)
 	_ = s.InitBoard("test", nil)
-	return engine.New(s)
+	eng := engine.New(s)
+	_ = eng.AddUser("testuser", "human", "local")
+	return eng, s
+}
+
+func createUnassignedItem(t *testing.T, s store.Store, title string) *domain.Item {
+	t.Helper()
+	var created *domain.Item
+	err := s.Transaction(func(board *domain.Board) error {
+		item := &domain.Item{
+			ID:          domain.GenerateID(),
+			DisplayNum:  board.NextDisplay,
+			Type:        "task",
+			Title:       title,
+			Description: "test",
+			Status:      board.Columns[0].Name,
+			Priority:    "medium",
+			Assignee:    "",
+		}
+		board.Items[item.ID] = item
+		board.DisplayMap[item.DisplayNum] = item.ID
+		board.NextDisplay++
+		created = item
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("createUnassignedItem failed: %v", err)
+	}
+	return created
 }
 
 func TestCreateItem(t *testing.T) {
-	eng := setupEngine(t)
+	eng, _ := setupEngine(t)
 
 	item, err := eng.CreateItem("epic", "Build auth system", "", "", "medium", "", nil)
 	if err != nil {
@@ -38,7 +68,7 @@ func TestCreateItem(t *testing.T) {
 }
 
 func TestCreateItem_WithParent(t *testing.T) {
-	eng := setupEngine(t)
+	eng, _ := setupEngine(t)
 
 	epic, _ := eng.CreateItem("epic", "Epic", "", "", "medium", "", nil)
 	story, err := eng.CreateItem("story", "Story", epic.ID, "", "medium", "", nil)
@@ -51,7 +81,7 @@ func TestCreateItem_WithParent(t *testing.T) {
 }
 
 func TestCreateItem_InvalidParent(t *testing.T) {
-	eng := setupEngine(t)
+	eng, _ := setupEngine(t)
 
 	_, err := eng.CreateItem("story", "Story", "nonexistent", "", "medium", "", nil)
 	if err == nil {
@@ -60,7 +90,7 @@ func TestCreateItem_InvalidParent(t *testing.T) {
 }
 
 func TestCreateItem_InvalidType(t *testing.T) {
-	eng := setupEngine(t)
+	eng, _ := setupEngine(t)
 
 	_, err := eng.CreateItem("bug", "Bug report", "", "", "medium", "", nil)
 	if err == nil {
@@ -69,7 +99,7 @@ func TestCreateItem_InvalidType(t *testing.T) {
 }
 
 func TestCreateItem_EmptyTitle(t *testing.T) {
-	eng := setupEngine(t)
+	eng, _ := setupEngine(t)
 
 	_, err := eng.CreateItem("task", "", "", "", "medium", "", nil)
 	if err == nil {
@@ -78,7 +108,7 @@ func TestCreateItem_EmptyTitle(t *testing.T) {
 }
 
 func TestCreateItem_InvalidPriority(t *testing.T) {
-	eng := setupEngine(t)
+	eng, _ := setupEngine(t)
 
 	_, err := eng.CreateItem("task", "Task", "", "", "urgent", "", nil)
 	if err == nil {
@@ -87,7 +117,7 @@ func TestCreateItem_InvalidPriority(t *testing.T) {
 }
 
 func TestCreateItem_DefaultPriority(t *testing.T) {
-	eng := setupEngine(t)
+	eng, _ := setupEngine(t)
 
 	item, err := eng.CreateItem("task", "Task", "", "", "", "", nil)
 	if err != nil {
@@ -99,7 +129,7 @@ func TestCreateItem_DefaultPriority(t *testing.T) {
 }
 
 func TestMoveItem(t *testing.T) {
-	eng := setupEngine(t)
+	eng, _ := setupEngine(t)
 
 	item, _ := eng.CreateItem("task", "Fix bug", "", "", "medium", "", nil)
 
@@ -115,7 +145,7 @@ func TestMoveItem(t *testing.T) {
 }
 
 func TestMoveItem_InvalidStatus(t *testing.T) {
-	eng := setupEngine(t)
+	eng, _ := setupEngine(t)
 
 	item, _ := eng.CreateItem("task", "Fix bug", "", "", "medium", "", nil)
 
@@ -126,7 +156,7 @@ func TestMoveItem_InvalidStatus(t *testing.T) {
 }
 
 func TestBlockItem(t *testing.T) {
-	eng := setupEngine(t)
+	eng, _ := setupEngine(t)
 
 	task1, _ := eng.CreateItem("task", "Task 1", "", "", "medium", "", nil)
 	task2, _ := eng.CreateItem("task", "Task 2", "", "", "medium", "", nil)
@@ -143,7 +173,7 @@ func TestBlockItem(t *testing.T) {
 }
 
 func TestBlockItem_SelfBlock(t *testing.T) {
-	eng := setupEngine(t)
+	eng, _ := setupEngine(t)
 
 	task, _ := eng.CreateItem("task", "Task", "", "", "medium", "", nil)
 
@@ -154,7 +184,7 @@ func TestBlockItem_SelfBlock(t *testing.T) {
 }
 
 func TestBlockItem_Duplicate(t *testing.T) {
-	eng := setupEngine(t)
+	eng, _ := setupEngine(t)
 
 	task1, _ := eng.CreateItem("task", "Task 1", "", "", "medium", "", nil)
 	task2, _ := eng.CreateItem("task", "Task 2", "", "", "medium", "", nil)
@@ -167,7 +197,7 @@ func TestBlockItem_Duplicate(t *testing.T) {
 }
 
 func TestUnblockItem(t *testing.T) {
-	eng := setupEngine(t)
+	eng, _ := setupEngine(t)
 
 	task1, _ := eng.CreateItem("task", "Task 1", "", "", "medium", "", nil)
 	task2, _ := eng.CreateItem("task", "Task 2", "", "", "medium", "", nil)
@@ -185,7 +215,7 @@ func TestUnblockItem(t *testing.T) {
 }
 
 func TestUnblockItem_NotBlocked(t *testing.T) {
-	eng := setupEngine(t)
+	eng, _ := setupEngine(t)
 
 	task1, _ := eng.CreateItem("task", "Task 1", "", "", "medium", "", nil)
 	task2, _ := eng.CreateItem("task", "Task 2", "", "", "medium", "", nil)
@@ -197,7 +227,7 @@ func TestUnblockItem_NotBlocked(t *testing.T) {
 }
 
 func TestAssignItem(t *testing.T) {
-	eng := setupEngine(t)
+	eng, _ := setupEngine(t)
 
 	task, _ := eng.CreateItem("task", "Task", "", "", "medium", "", nil)
 	_ = eng.AddUser("Dev", "human", "local")
@@ -220,7 +250,7 @@ func TestAssignItem(t *testing.T) {
 }
 
 func TestEditItem(t *testing.T) {
-	eng := setupEngine(t)
+	eng, _ := setupEngine(t)
 
 	item, _ := eng.CreateItem("task", "Old Title", "", "", "medium", "", nil)
 
@@ -242,7 +272,7 @@ func TestEditItem(t *testing.T) {
 }
 
 func TestEditItem_NoChanges(t *testing.T) {
-	eng := setupEngine(t)
+	eng, _ := setupEngine(t)
 
 	item, _ := eng.CreateItem("task", "Title", "", "", "medium", "", nil)
 
@@ -253,7 +283,7 @@ func TestEditItem_NoChanges(t *testing.T) {
 }
 
 func TestDeleteItem(t *testing.T) {
-	eng := setupEngine(t)
+	eng, _ := setupEngine(t)
 
 	item, _ := eng.CreateItem("task", "Task", "", "", "medium", "", nil)
 
@@ -269,7 +299,7 @@ func TestDeleteItem(t *testing.T) {
 }
 
 func TestDeleteItem_WithChildren(t *testing.T) {
-	eng := setupEngine(t)
+	eng, _ := setupEngine(t)
 
 	epic, _ := eng.CreateItem("epic", "Epic", "", "", "medium", "", nil)
 	_, _ = eng.CreateItem("story", "Story", epic.ID, "", "medium", "", nil)
@@ -281,7 +311,7 @@ func TestDeleteItem_WithChildren(t *testing.T) {
 }
 
 func TestAddUser(t *testing.T) {
-	eng := setupEngine(t)
+	eng, _ := setupEngine(t)
 
 	err := eng.AddUser("Claude Agent", "agent", "claude-code")
 	if err != nil {
@@ -289,22 +319,26 @@ func TestAddUser(t *testing.T) {
 	}
 
 	board, _ := eng.ListBoard()
-	if len(board.Users) != 1 {
-		t.Errorf("expected 1 user, got %d", len(board.Users))
+	if len(board.Users) != 2 {
+		t.Errorf("expected 2 users, got %d", len(board.Users))
 	}
 
+	found := false
 	for _, u := range board.Users {
-		if u.Name != "Claude Agent" {
-			t.Errorf("expected name 'Claude Agent', got %q", u.Name)
+		if u.Name == "Claude Agent" {
+			found = true
+			if u.Provider != "claude-code" {
+				t.Errorf("expected provider 'claude-code', got %q", u.Provider)
+			}
 		}
-		if u.Provider != "claude-code" {
-			t.Errorf("expected provider 'claude-code', got %q", u.Provider)
-		}
+	}
+	if !found {
+		t.Error("expected to find user 'Claude Agent'")
 	}
 }
 
 func TestAddUser_InvalidType(t *testing.T) {
-	eng := setupEngine(t)
+	eng, _ := setupEngine(t)
 
 	err := eng.AddUser("Bot", "robot", "local")
 	if err == nil {
@@ -313,29 +347,31 @@ func TestAddUser_InvalidType(t *testing.T) {
 }
 
 func TestRemoveUser(t *testing.T) {
-	eng := setupEngine(t)
+	eng, _ := setupEngine(t)
 
 	_ = eng.AddUser("Dev", "human", "local")
 
 	board, _ := eng.ListBoard()
-	var userID string
-	for id := range board.Users {
-		userID = id
+	var devID string
+	for id, u := range board.Users {
+		if u.Name == "Dev" {
+			devID = id
+		}
 	}
 
-	err := eng.RemoveUser(userID)
+	err := eng.RemoveUser(devID)
 	if err != nil {
 		t.Fatalf("RemoveUser failed: %v", err)
 	}
 
 	board, _ = eng.ListBoard()
-	if len(board.Users) != 0 {
-		t.Errorf("expected 0 users, got %d", len(board.Users))
+	if len(board.Users) != 1 {
+		t.Errorf("expected 1 user, got %d", len(board.Users))
 	}
 }
 
 func TestListItems_WithFilter(t *testing.T) {
-	eng := setupEngine(t)
+	eng, _ := setupEngine(t)
 
 	_, _ = eng.CreateItem("task", "Task 1", "", "", "medium", "", []string{"frontend"})
 	item2, _ := eng.CreateItem("task", "Task 2", "", "", "high", "", []string{"backend"})
@@ -359,7 +395,7 @@ func TestListItems_WithFilter(t *testing.T) {
 }
 
 func TestCreatePlan(t *testing.T) {
-	eng := setupEngine(t)
+	eng, _ := setupEngine(t)
 
 	plan, err := eng.CreatePlan("Design Doc", "Some content", "design.md")
 	if err != nil {
@@ -381,7 +417,7 @@ func TestCreatePlan(t *testing.T) {
 }
 
 func TestCreatePlan_EmptyTitle(t *testing.T) {
-	eng := setupEngine(t)
+	eng, _ := setupEngine(t)
 
 	_, err := eng.CreatePlan("", "content", "")
 	if err == nil {
@@ -390,7 +426,7 @@ func TestCreatePlan_EmptyTitle(t *testing.T) {
 }
 
 func TestImportPlan(t *testing.T) {
-	eng := setupEngine(t)
+	eng, _ := setupEngine(t)
 
 	item1, _ := eng.CreateItem("task", "Task 1", "", "", "medium", "", nil)
 	item2, _ := eng.CreateItem("task", "Task 2", "", "", "medium", "", nil)
@@ -410,7 +446,7 @@ func TestImportPlan(t *testing.T) {
 }
 
 func TestImportPlan_NoHeading(t *testing.T) {
-	eng := setupEngine(t)
+	eng, _ := setupEngine(t)
 
 	_, err := eng.ImportPlan("no heading here", "", nil)
 	if err == nil {
@@ -419,7 +455,7 @@ func TestImportPlan_NoHeading(t *testing.T) {
 }
 
 func TestLinkUnlinkPlan(t *testing.T) {
-	eng := setupEngine(t)
+	eng, _ := setupEngine(t)
 
 	plan, _ := eng.CreatePlan("Plan", "content", "")
 	item, _ := eng.CreateItem("task", "Task", "", "", "medium", "", nil)
@@ -446,7 +482,7 @@ func TestLinkUnlinkPlan(t *testing.T) {
 }
 
 func TestDeletePlan(t *testing.T) {
-	eng := setupEngine(t)
+	eng, _ := setupEngine(t)
 
 	plan, _ := eng.CreatePlan("Plan", "content", "")
 
@@ -462,7 +498,7 @@ func TestDeletePlan(t *testing.T) {
 }
 
 func TestUpdatePlan(t *testing.T) {
-	eng := setupEngine(t)
+	eng, _ := setupEngine(t)
 
 	plan, _ := eng.CreatePlan("Old Title", "old content", "")
 
@@ -481,7 +517,7 @@ func TestUpdatePlan(t *testing.T) {
 }
 
 func TestUpdatePlan_NoChanges(t *testing.T) {
-	eng := setupEngine(t)
+	eng, _ := setupEngine(t)
 
 	plan, _ := eng.CreatePlan("Title", "content", "")
 
@@ -492,7 +528,7 @@ func TestUpdatePlan_NoChanges(t *testing.T) {
 }
 
 func TestListPlans(t *testing.T) {
-	eng := setupEngine(t)
+	eng, _ := setupEngine(t)
 
 	_, _ = eng.CreatePlan("Plan A", "content a", "")
 	_, _ = eng.CreatePlan("Plan B", "content b", "")
@@ -507,7 +543,7 @@ func TestListPlans(t *testing.T) {
 }
 
 func TestPlansForItem(t *testing.T) {
-	eng := setupEngine(t)
+	eng, _ := setupEngine(t)
 
 	item, _ := eng.CreateItem("task", "Task", "", "", "medium", "", nil)
 	plan, _ := eng.CreatePlan("Plan", "content", "")
@@ -523,7 +559,7 @@ func TestPlansForItem(t *testing.T) {
 }
 
 func TestGetChildren(t *testing.T) {
-	eng := setupEngine(t)
+	eng, _ := setupEngine(t)
 
 	epic, _ := eng.CreateItem("epic", "Epic", "", "", "medium", "", nil)
 	_, _ = eng.CreateItem("story", "Story 1", epic.ID, "", "medium", "", nil)
@@ -535,5 +571,27 @@ func TestGetChildren(t *testing.T) {
 	}
 	if len(children) != 2 {
 		t.Errorf("expected 2 children, got %d", len(children))
+	}
+}
+
+func TestCheckAssignee_Unassigned(t *testing.T) {
+	item := &domain.Item{DisplayNum: 5, Assignee: ""}
+	err := engine.CheckAssignee(item)
+	if err == nil {
+		t.Fatal("expected error for unassigned item")
+	}
+	if !strings.Contains(err.Error(), "no assignee") {
+		t.Errorf("expected 'no assignee' in error, got: %v", err)
+	}
+	if !strings.Contains(err.Error(), "ob assign 5") {
+		t.Errorf("expected fix instructions in error, got: %v", err)
+	}
+}
+
+func TestCheckAssignee_Assigned(t *testing.T) {
+	item := &domain.Item{DisplayNum: 5, Assignee: "user123"}
+	err := engine.CheckAssignee(item)
+	if err != nil {
+		t.Fatalf("expected no error for assigned item, got: %v", err)
 	}
 }
