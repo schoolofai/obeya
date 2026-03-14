@@ -36,7 +36,16 @@ func (e *Engine) CreateItem(itemType, title, parentRef, description, priority, a
 			return err
 		}
 
-		item := buildItem(board, itemType, title, description, priority, assignee, parentID, tags)
+		if assignee == "" {
+			return fmt.Errorf("assignee is required. Every item must have an owner.\n\n" +
+				"Run 'ob user list' to see registered users.")
+		}
+		resolvedAssignee, err := board.ResolveUserID(assignee)
+		if err != nil {
+			return fmt.Errorf("unknown assignee %q: %w\nRun 'ob user list' to see registered users", assignee, err)
+		}
+
+		item := buildItem(board, itemType, title, description, priority, resolvedAssignee, parentID, tags)
 		board.Items[item.ID] = item
 		board.DisplayMap[item.DisplayNum] = item.ID
 		board.NextDisplay++

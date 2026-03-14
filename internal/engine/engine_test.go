@@ -48,7 +48,7 @@ func createUnassignedItem(t *testing.T, s store.Store, title string) *domain.Ite
 func TestCreateItem(t *testing.T) {
 	eng, _ := setupEngine(t)
 
-	item, err := eng.CreateItem("epic", "Build auth system", "", "", "medium", "", nil)
+	item, err := eng.CreateItem("epic", "Build auth system", "", "", "medium", "testuser", nil)
 	if err != nil {
 		t.Fatalf("CreateItem failed: %v", err)
 	}
@@ -649,4 +649,36 @@ func TestDeleteItem_UnassignedFails(t *testing.T) {
 	}
 }
 
+func TestCreateItem_EmptyAssigneeFails(t *testing.T) {
+	eng, _ := setupEngine(t)
+	_, err := eng.CreateItem("task", "Test", "", "desc", "medium", "", nil)
+	if err == nil {
+		t.Fatal("expected error for empty assignee")
+	}
+	if !strings.Contains(err.Error(), "assignee is required") {
+		t.Errorf("expected 'assignee is required' error, got: %v", err)
+	}
+}
+
+func TestCreateItem_UnknownAssigneeFails(t *testing.T) {
+	eng, _ := setupEngine(t)
+	_, err := eng.CreateItem("task", "Test", "", "desc", "medium", "nonexistent", nil)
+	if err == nil {
+		t.Fatal("expected error for unknown assignee")
+	}
+	if !strings.Contains(err.Error(), "ob user list") {
+		t.Errorf("expected 'ob user list' in error, got: %v", err)
+	}
+}
+
+func TestCreateItem_AssigneeResolved(t *testing.T) {
+	eng, _ := setupEngine(t)
+	item, err := eng.CreateItem("task", "Test", "", "desc", "medium", "testuser", nil)
+	if err != nil {
+		t.Fatalf("expected success with valid assignee, got: %v", err)
+	}
+	if item.Assignee == "" {
+		t.Error("expected assignee to be set")
+	}
+}
 
