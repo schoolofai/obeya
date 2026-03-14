@@ -7,12 +7,12 @@ describe("Button variants", () => {
   it("renders primary variant with correct class", () => {
     render(<Button variant="primary">Click me</Button>);
     const btn = screen.getByRole("button", { name: "Click me" });
-    expect(btn).toHaveClass("bg-blue-600");
+    expect(btn).toHaveClass("bg-[#7aa2f7]");
   });
 
   it("renders secondary variant", () => {
     render(<Button variant="secondary">Click me</Button>);
-    expect(screen.getByRole("button")).toHaveClass("bg-gray-100");
+    expect(screen.getByRole("button")).toHaveClass("bg-[#21262d]");
   });
 
   it("renders ghost variant", () => {
@@ -22,7 +22,7 @@ describe("Button variants", () => {
 
   it("renders danger variant", () => {
     render(<Button variant="danger">Click me</Button>);
-    expect(screen.getByRole("button")).toHaveClass("bg-red-600");
+    expect(screen.getByRole("button")).toHaveClass("bg-[#f85149]");
   });
 });
 

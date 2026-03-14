@@ -18,7 +18,10 @@ export function Input({
 }: InputProps) {
   return (
     <div className="flex flex-col gap-1">
-      <label htmlFor={name} className="text-sm font-medium text-gray-700">
+      <label
+        htmlFor={name}
+        className="font-mono text-sm font-medium text-[#c9d1d9]"
+      >
         {label}
       </label>
       <input
@@ -26,16 +29,18 @@ export function Input({
         name={name}
         type={type}
         className={[
-          "rounded-md border px-3 py-2 text-sm text-gray-900 bg-white placeholder:text-gray-400",
-          "focus:outline-none focus:ring-2 focus:ring-blue-500",
-          error ? "border-red-500" : "border-gray-300",
+          "rounded-md border bg-[#0d1117] px-3 py-2 font-mono text-sm text-[#c9d1d9] placeholder:text-[#484f58]",
+          "focus:outline-none focus:ring-2 focus:ring-[#58a6ff] focus:border-[#58a6ff]",
+          error ? "border-[#f85149]" : "border-[#30363d]",
           className,
         ]
           .filter(Boolean)
           .join(" ")}
         {...props}
       />
-      {error && <p className="text-xs text-red-600">{error}</p>}
+      {error && (
+        <p className="font-mono text-xs text-[#f85149]">{error}</p>
+      )}
     </div>
   );
 }
