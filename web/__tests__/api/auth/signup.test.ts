@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { ErrorCode } from "@/lib/errors";
 
 vi.mock("@/lib/appwrite/server", () => ({
@@ -19,6 +19,8 @@ import { getUsers } from "@/lib/appwrite/server";
 
 const mockCreate = vi.fn();
 const mockGetUsers = vi.mocked(getUsers);
+const mockFetch = vi.fn();
+const originalFetch = global.fetch;
 
 function jsonRequest(body: unknown): Request {
   return new Request("http://localhost/api/auth/signup", {
@@ -31,14 +33,28 @@ function jsonRequest(body: unknown): Request {
 beforeEach(() => {
   vi.clearAllMocks();
   mockGetUsers.mockReturnValue({ create: mockCreate } as unknown as ReturnType<typeof getUsers>);
+  global.fetch = mockFetch;
+});
+
+afterEach(() => {
+  global.fetch = originalFetch;
 });
 
 describe("POST /api/auth/signup", () => {
-  it("returns 201 with user data on successful signup", async () => {
+  it("returns 201 with user and session data on successful signup", async () => {
     mockCreate.mockResolvedValue({
       $id: "user-123",
       email: "alice@example.com",
       name: "Alice",
+    });
+
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        $id: "session-456",
+        userId: "user-123",
+        secret: "session-secret",
+      }),
     });
 
     const req = jsonRequest({
@@ -53,7 +69,10 @@ describe("POST /api/auth/signup", () => {
     expect(res.status).toBe(201);
     expect(body).toEqual({
       ok: true,
-      data: { id: "user-123", email: "alice@example.com", name: "Alice" },
+      data: {
+        user: { id: "user-123", email: "alice@example.com", name: "Alice" },
+        session: { id: "session-456" },
+      },
     });
     expect(mockCreate).toHaveBeenCalledWith(
       expect.any(String),
@@ -61,6 +80,77 @@ describe("POST /api/auth/signup", () => {
       undefined,
       "securepass123",
       "Alice",
+    );
+  });
+
+  it("sets httpOnly session cookie on successful signup", async () => {
+    mockCreate.mockResolvedValue({
+      $id: "user-123",
+      email: "alice@example.com",
+      name: "Alice",
+    });
+
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        $id: "session-456",
+        userId: "user-123",
+        secret: "session-secret",
+      }),
+    });
+
+    const req = jsonRequest({
+      email: "alice@example.com",
+      password: "securepass123",
+      name: "Alice",
+    });
+
+    const res = await POST(req);
+    const cookie = res.headers.get("set-cookie");
+
+    expect(cookie).toBeTruthy();
+    expect(cookie).toContain("obeya_session=user-123");
+    expect(cookie).toContain("HttpOnly");
+    expect(cookie).toContain("Path=/");
+  });
+
+  it("calls Appwrite session endpoint with correct parameters", async () => {
+    mockCreate.mockResolvedValue({
+      $id: "user-123",
+      email: "alice@example.com",
+      name: "Alice",
+    });
+
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        $id: "session-456",
+        userId: "user-123",
+        secret: "session-secret",
+      }),
+    });
+
+    const req = jsonRequest({
+      email: "alice@example.com",
+      password: "securepass123",
+      name: "Alice",
+    });
+
+    await POST(req);
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      "https://test.appwrite.io/v1/account/sessions/email",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Appwrite-Project": "test-project",
+        },
+        body: JSON.stringify({
+          email: "alice@example.com",
+          password: "securepass123",
+        }),
+      },
     );
   });
 
