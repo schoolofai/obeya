@@ -60,6 +60,9 @@ func (e *Engine) MoveItem(ref, status, userID, sessionID string) error {
 		}
 
 		item := board.Items[id]
+		if err := CheckAssignee(item); err != nil {
+			return err
+		}
 		oldStatus := item.Status
 		item.Status = status
 		item.UpdatedAt = time.Now()
@@ -102,6 +105,9 @@ func (e *Engine) BlockItem(ref, blockerRef, userID, sessionID string) error {
 		}
 
 		item := board.Items[id]
+		if err := CheckAssignee(item); err != nil {
+			return err
+		}
 		if containsString(item.BlockedBy, blockerID) {
 			return fmt.Errorf("item #%d is already blocked by #%d", item.DisplayNum, board.Items[blockerID].DisplayNum)
 		}
@@ -122,6 +128,9 @@ func (e *Engine) UnblockItem(ref, blockerRef, userID, sessionID string) error {
 		}
 
 		item := board.Items[id]
+		if err := CheckAssignee(item); err != nil {
+			return err
+		}
 		filtered, found := removeString(item.BlockedBy, blockerID)
 		if !found {
 			return fmt.Errorf("item is not blocked by %s", blockerID)
@@ -143,6 +152,9 @@ func (e *Engine) EditItem(ref, title, description, priority, userID, sessionID s
 		}
 
 		item := board.Items[id]
+		if err := CheckAssignee(item); err != nil {
+			return err
+		}
 		changes, err := applyEdits(item, title, description, priority)
 		if err != nil {
 			return err
@@ -169,6 +181,9 @@ func (e *Engine) DeleteItem(ref, userID, sessionID string) error {
 		}
 
 		item := board.Items[id]
+		if err := CheckAssignee(item); err != nil {
+			return err
+		}
 		delete(board.Items, id)
 		delete(board.DisplayMap, item.DisplayNum)
 

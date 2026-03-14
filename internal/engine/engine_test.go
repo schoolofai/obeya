@@ -70,8 +70,8 @@ func TestCreateItem(t *testing.T) {
 func TestCreateItem_WithParent(t *testing.T) {
 	eng, _ := setupEngine(t)
 
-	epic, _ := eng.CreateItem("epic", "Epic", "", "", "medium", "", nil)
-	story, err := eng.CreateItem("story", "Story", epic.ID, "", "medium", "", nil)
+	epic, _ := eng.CreateItem("epic", "Epic", "", "", "medium", "testuser", nil)
+	story, err := eng.CreateItem("story", "Story", epic.ID, "", "medium", "testuser", nil)
 	if err != nil {
 		t.Fatalf("CreateItem with parent failed: %v", err)
 	}
@@ -83,7 +83,7 @@ func TestCreateItem_WithParent(t *testing.T) {
 func TestCreateItem_InvalidParent(t *testing.T) {
 	eng, _ := setupEngine(t)
 
-	_, err := eng.CreateItem("story", "Story", "nonexistent", "", "medium", "", nil)
+	_, err := eng.CreateItem("story", "Story", "nonexistent", "", "medium", "testuser", nil)
 	if err == nil {
 		t.Error("expected error for invalid parent")
 	}
@@ -92,7 +92,7 @@ func TestCreateItem_InvalidParent(t *testing.T) {
 func TestCreateItem_InvalidType(t *testing.T) {
 	eng, _ := setupEngine(t)
 
-	_, err := eng.CreateItem("bug", "Bug report", "", "", "medium", "", nil)
+	_, err := eng.CreateItem("bug", "Bug report", "", "", "medium", "testuser", nil)
 	if err == nil {
 		t.Error("expected error for invalid type")
 	}
@@ -101,7 +101,7 @@ func TestCreateItem_InvalidType(t *testing.T) {
 func TestCreateItem_EmptyTitle(t *testing.T) {
 	eng, _ := setupEngine(t)
 
-	_, err := eng.CreateItem("task", "", "", "", "medium", "", nil)
+	_, err := eng.CreateItem("task", "", "", "", "medium", "testuser", nil)
 	if err == nil {
 		t.Error("expected error for empty title")
 	}
@@ -110,7 +110,7 @@ func TestCreateItem_EmptyTitle(t *testing.T) {
 func TestCreateItem_InvalidPriority(t *testing.T) {
 	eng, _ := setupEngine(t)
 
-	_, err := eng.CreateItem("task", "Task", "", "", "urgent", "", nil)
+	_, err := eng.CreateItem("task", "Task", "", "", "urgent", "testuser", nil)
 	if err == nil {
 		t.Error("expected error for invalid priority")
 	}
@@ -119,7 +119,7 @@ func TestCreateItem_InvalidPriority(t *testing.T) {
 func TestCreateItem_DefaultPriority(t *testing.T) {
 	eng, _ := setupEngine(t)
 
-	item, err := eng.CreateItem("task", "Task", "", "", "", "", nil)
+	item, err := eng.CreateItem("task", "Task", "", "", "", "testuser", nil)
 	if err != nil {
 		t.Fatalf("CreateItem failed: %v", err)
 	}
@@ -131,7 +131,7 @@ func TestCreateItem_DefaultPriority(t *testing.T) {
 func TestMoveItem(t *testing.T) {
 	eng, _ := setupEngine(t)
 
-	item, _ := eng.CreateItem("task", "Fix bug", "", "", "medium", "", nil)
+	item, _ := eng.CreateItem("task", "Fix bug", "", "", "medium", "testuser", nil)
 
 	err := eng.MoveItem(item.ID, "in-progress", "", "")
 	if err != nil {
@@ -147,7 +147,7 @@ func TestMoveItem(t *testing.T) {
 func TestMoveItem_InvalidStatus(t *testing.T) {
 	eng, _ := setupEngine(t)
 
-	item, _ := eng.CreateItem("task", "Fix bug", "", "", "medium", "", nil)
+	item, _ := eng.CreateItem("task", "Fix bug", "", "", "medium", "testuser", nil)
 
 	err := eng.MoveItem(item.ID, "invalid-column", "", "")
 	if err == nil {
@@ -158,8 +158,8 @@ func TestMoveItem_InvalidStatus(t *testing.T) {
 func TestBlockItem(t *testing.T) {
 	eng, _ := setupEngine(t)
 
-	task1, _ := eng.CreateItem("task", "Task 1", "", "", "medium", "", nil)
-	task2, _ := eng.CreateItem("task", "Task 2", "", "", "medium", "", nil)
+	task1, _ := eng.CreateItem("task", "Task 1", "", "", "medium", "testuser", nil)
+	task2, _ := eng.CreateItem("task", "Task 2", "", "", "medium", "testuser", nil)
 
 	err := eng.BlockItem(task2.ID, task1.ID, "", "")
 	if err != nil {
@@ -175,7 +175,7 @@ func TestBlockItem(t *testing.T) {
 func TestBlockItem_SelfBlock(t *testing.T) {
 	eng, _ := setupEngine(t)
 
-	task, _ := eng.CreateItem("task", "Task", "", "", "medium", "", nil)
+	task, _ := eng.CreateItem("task", "Task", "", "", "medium", "testuser", nil)
 
 	err := eng.BlockItem(task.ID, task.ID, "", "")
 	if err == nil {
@@ -186,8 +186,8 @@ func TestBlockItem_SelfBlock(t *testing.T) {
 func TestBlockItem_Duplicate(t *testing.T) {
 	eng, _ := setupEngine(t)
 
-	task1, _ := eng.CreateItem("task", "Task 1", "", "", "medium", "", nil)
-	task2, _ := eng.CreateItem("task", "Task 2", "", "", "medium", "", nil)
+	task1, _ := eng.CreateItem("task", "Task 1", "", "", "medium", "testuser", nil)
+	task2, _ := eng.CreateItem("task", "Task 2", "", "", "medium", "testuser", nil)
 
 	_ = eng.BlockItem(task2.ID, task1.ID, "", "")
 	err := eng.BlockItem(task2.ID, task1.ID, "", "")
@@ -199,8 +199,8 @@ func TestBlockItem_Duplicate(t *testing.T) {
 func TestUnblockItem(t *testing.T) {
 	eng, _ := setupEngine(t)
 
-	task1, _ := eng.CreateItem("task", "Task 1", "", "", "medium", "", nil)
-	task2, _ := eng.CreateItem("task", "Task 2", "", "", "medium", "", nil)
+	task1, _ := eng.CreateItem("task", "Task 1", "", "", "medium", "testuser", nil)
+	task2, _ := eng.CreateItem("task", "Task 2", "", "", "medium", "testuser", nil)
 
 	_ = eng.BlockItem(task2.ID, task1.ID, "", "")
 	err := eng.UnblockItem(task2.ID, task1.ID, "", "")
@@ -217,8 +217,8 @@ func TestUnblockItem(t *testing.T) {
 func TestUnblockItem_NotBlocked(t *testing.T) {
 	eng, _ := setupEngine(t)
 
-	task1, _ := eng.CreateItem("task", "Task 1", "", "", "medium", "", nil)
-	task2, _ := eng.CreateItem("task", "Task 2", "", "", "medium", "", nil)
+	task1, _ := eng.CreateItem("task", "Task 1", "", "", "medium", "testuser", nil)
+	task2, _ := eng.CreateItem("task", "Task 2", "", "", "medium", "testuser", nil)
 
 	err := eng.UnblockItem(task2.ID, task1.ID, "", "")
 	if err == nil {
@@ -229,7 +229,7 @@ func TestUnblockItem_NotBlocked(t *testing.T) {
 func TestAssignItem(t *testing.T) {
 	eng, _ := setupEngine(t)
 
-	task, _ := eng.CreateItem("task", "Task", "", "", "medium", "", nil)
+	task, _ := eng.CreateItem("task", "Task", "", "", "medium", "testuser", nil)
 	_ = eng.AddUser("Dev", "human", "local")
 
 	board, _ := eng.ListBoard()
@@ -252,7 +252,7 @@ func TestAssignItem(t *testing.T) {
 func TestEditItem(t *testing.T) {
 	eng, _ := setupEngine(t)
 
-	item, _ := eng.CreateItem("task", "Old Title", "", "", "medium", "", nil)
+	item, _ := eng.CreateItem("task", "Old Title", "", "", "medium", "testuser", nil)
 
 	err := eng.EditItem(item.ID, "New Title", "New desc", "high", "", "")
 	if err != nil {
@@ -274,7 +274,7 @@ func TestEditItem(t *testing.T) {
 func TestEditItem_NoChanges(t *testing.T) {
 	eng, _ := setupEngine(t)
 
-	item, _ := eng.CreateItem("task", "Title", "", "", "medium", "", nil)
+	item, _ := eng.CreateItem("task", "Title", "", "", "medium", "testuser", nil)
 
 	err := eng.EditItem(item.ID, "", "", "", "", "")
 	if err == nil {
@@ -285,7 +285,7 @@ func TestEditItem_NoChanges(t *testing.T) {
 func TestDeleteItem(t *testing.T) {
 	eng, _ := setupEngine(t)
 
-	item, _ := eng.CreateItem("task", "Task", "", "", "medium", "", nil)
+	item, _ := eng.CreateItem("task", "Task", "", "", "medium", "testuser", nil)
 
 	err := eng.DeleteItem(item.ID, "", "")
 	if err != nil {
@@ -301,8 +301,8 @@ func TestDeleteItem(t *testing.T) {
 func TestDeleteItem_WithChildren(t *testing.T) {
 	eng, _ := setupEngine(t)
 
-	epic, _ := eng.CreateItem("epic", "Epic", "", "", "medium", "", nil)
-	_, _ = eng.CreateItem("story", "Story", epic.ID, "", "medium", "", nil)
+	epic, _ := eng.CreateItem("epic", "Epic", "", "", "medium", "testuser", nil)
+	_, _ = eng.CreateItem("story", "Story", epic.ID, "", "medium", "testuser", nil)
 
 	err := eng.DeleteItem(epic.ID, "", "")
 	if err == nil {
@@ -373,8 +373,8 @@ func TestRemoveUser(t *testing.T) {
 func TestListItems_WithFilter(t *testing.T) {
 	eng, _ := setupEngine(t)
 
-	_, _ = eng.CreateItem("task", "Task 1", "", "", "medium", "", []string{"frontend"})
-	item2, _ := eng.CreateItem("task", "Task 2", "", "", "high", "", []string{"backend"})
+	_, _ = eng.CreateItem("task", "Task 1", "", "", "medium", "testuser", []string{"frontend"})
+	item2, _ := eng.CreateItem("task", "Task 2", "", "", "high", "testuser", []string{"backend"})
 	_ = eng.MoveItem(item2.ID, "in-progress", "", "")
 
 	items, err := eng.ListItems(engine.ListFilter{Status: "in-progress"})
@@ -428,8 +428,8 @@ func TestCreatePlan_EmptyTitle(t *testing.T) {
 func TestImportPlan(t *testing.T) {
 	eng, _ := setupEngine(t)
 
-	item1, _ := eng.CreateItem("task", "Task 1", "", "", "medium", "", nil)
-	item2, _ := eng.CreateItem("task", "Task 2", "", "", "medium", "", nil)
+	item1, _ := eng.CreateItem("task", "Task 1", "", "", "medium", "testuser", nil)
+	item2, _ := eng.CreateItem("task", "Task 2", "", "", "medium", "testuser", nil)
 
 	content := "# My Plan\n\nThis is the plan content."
 	plan, err := eng.ImportPlan(content, "plan.md", []string{item1.ID, item2.ID})
@@ -458,7 +458,7 @@ func TestLinkUnlinkPlan(t *testing.T) {
 	eng, _ := setupEngine(t)
 
 	plan, _ := eng.CreatePlan("Plan", "content", "")
-	item, _ := eng.CreateItem("task", "Task", "", "", "medium", "", nil)
+	item, _ := eng.CreateItem("task", "Task", "", "", "medium", "testuser", nil)
 
 	err := eng.LinkPlan(plan.ID, []string{item.ID})
 	if err != nil {
@@ -545,7 +545,7 @@ func TestListPlans(t *testing.T) {
 func TestPlansForItem(t *testing.T) {
 	eng, _ := setupEngine(t)
 
-	item, _ := eng.CreateItem("task", "Task", "", "", "medium", "", nil)
+	item, _ := eng.CreateItem("task", "Task", "", "", "medium", "testuser", nil)
 	plan, _ := eng.CreatePlan("Plan", "content", "")
 	_ = eng.LinkPlan(plan.ID, []string{item.ID})
 
@@ -561,9 +561,9 @@ func TestPlansForItem(t *testing.T) {
 func TestGetChildren(t *testing.T) {
 	eng, _ := setupEngine(t)
 
-	epic, _ := eng.CreateItem("epic", "Epic", "", "", "medium", "", nil)
-	_, _ = eng.CreateItem("story", "Story 1", epic.ID, "", "medium", "", nil)
-	_, _ = eng.CreateItem("story", "Story 2", epic.ID, "", "medium", "", nil)
+	epic, _ := eng.CreateItem("epic", "Epic", "", "", "medium", "testuser", nil)
+	_, _ = eng.CreateItem("story", "Story 1", epic.ID, "", "medium", "testuser", nil)
+	_, _ = eng.CreateItem("story", "Story 2", epic.ID, "", "medium", "testuser", nil)
 
 	children, err := eng.GetChildren(epic.ID)
 	if err != nil {
@@ -595,3 +595,58 @@ func TestCheckAssignee_Assigned(t *testing.T) {
 		t.Fatalf("expected no error for assigned item, got: %v", err)
 	}
 }
+
+func TestMoveItem_UnassignedFails(t *testing.T) {
+	eng, s := setupEngine(t)
+	item := createUnassignedItem(t, s, "Unassigned task")
+	err := eng.MoveItem(item.ID, "in-progress", "", "")
+	if err == nil {
+		t.Fatal("expected error moving unassigned item")
+	}
+	if !strings.Contains(err.Error(), "no assignee") {
+		t.Errorf("expected 'no assignee' error, got: %v", err)
+	}
+}
+
+func TestEditItem_UnassignedFails(t *testing.T) {
+	eng, s := setupEngine(t)
+	item := createUnassignedItem(t, s, "Test")
+	err := eng.EditItem(item.ID, "New title", "", "", "", "")
+	if err == nil {
+		t.Fatal("expected error editing unassigned item")
+	}
+	if !strings.Contains(err.Error(), "no assignee") {
+		t.Errorf("expected 'no assignee' error, got: %v", err)
+	}
+}
+
+func TestBlockItem_UnassignedFails(t *testing.T) {
+	eng, s := setupEngine(t)
+	item1, _ := eng.CreateItem("task", "Task1", "", "desc", "medium", "testuser", nil)
+	item2 := createUnassignedItem(t, s, "Task2")
+	err := eng.BlockItem(item2.ID, item1.ID, "", "")
+	if err == nil {
+		t.Fatal("expected error blocking unassigned item")
+	}
+}
+
+func TestUnblockItem_UnassignedFails(t *testing.T) {
+	eng, s := setupEngine(t)
+	item1, _ := eng.CreateItem("task", "Task1", "", "desc", "medium", "testuser", nil)
+	item2 := createUnassignedItem(t, s, "Task2")
+	err := eng.UnblockItem(item2.ID, item1.ID, "", "")
+	if err == nil {
+		t.Fatal("expected error unblocking unassigned item")
+	}
+}
+
+func TestDeleteItem_UnassignedFails(t *testing.T) {
+	eng, s := setupEngine(t)
+	item := createUnassignedItem(t, s, "Test")
+	err := eng.DeleteItem(item.ID, "", "")
+	if err == nil {
+		t.Fatal("expected error deleting unassigned item")
+	}
+}
+
+
