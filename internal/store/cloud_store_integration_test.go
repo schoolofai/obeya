@@ -24,6 +24,9 @@ type apiCall struct {
 // exactly the same way it works with JSONStore — no Engine changes needed.
 func TestCloudStore_EngineIntegration(t *testing.T) {
 	board := domain.NewBoard("integration-test")
+	board.Users["test-user-id"] = &domain.Identity{
+		ID: "test-user-id", Name: "testuser", Type: "human", Provider: "local",
+	}
 
 	var mu sync.Mutex
 	var apiCalls []apiCall
@@ -73,7 +76,7 @@ func TestCloudStore_EngineIntegration(t *testing.T) {
 	eng := engine.New(cs)
 
 	// Test: Create an item via Engine
-	item, err := eng.CreateItem("task", "Integration Task", "", "desc", "medium", "", nil)
+	item, err := eng.CreateItem("task", "Integration Task", "", "desc", "medium", "testuser", nil)
 	if err != nil {
 		t.Fatalf("CreateItem via Engine failed: %v", err)
 	}
