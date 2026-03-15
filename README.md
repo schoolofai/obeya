@@ -8,14 +8,45 @@ Obeya (`ob`) is a lightweight, file-based task tracker that lives in your projec
 
 ## Install
 
-### Homebrew (macOS / Linux)
+### macOS
 
 ```bash
+# Homebrew (recommended)
 brew tap schoolofai/tap
 brew install obeya
+
+# Or use the install script
+curl -fsSL https://raw.githubusercontent.com/schoolofai/obeya/main/scripts/install.sh | sh
 ```
 
-### From source
+### Linux
+
+```bash
+# Install script (recommended)
+curl -fsSL https://raw.githubusercontent.com/schoolofai/obeya/main/scripts/install.sh | sh
+
+# Or install system-wide
+curl -fsSL https://raw.githubusercontent.com/schoolofai/obeya/main/scripts/install.sh | sh -s -- --global
+
+# Or download .deb / .rpm from GitHub Releases
+# Debian/Ubuntu:
+#   sudo dpkg -i obeya_<version>_linux_amd64.deb
+# RHEL/Fedora:
+#   sudo rpm -i obeya_<version>_linux_amd64.rpm
+```
+
+### Windows
+
+```powershell
+# PowerShell install script (recommended)
+irm https://raw.githubusercontent.com/schoolofai/obeya/main/scripts/install.ps1 | iex
+
+# Or via Scoop
+scoop bucket add obeya https://github.com/schoolofai/scoop-obeya
+scoop install obeya
+```
+
+### From source (all platforms)
 
 ```bash
 go install github.com/niladribose/obeya@latest
