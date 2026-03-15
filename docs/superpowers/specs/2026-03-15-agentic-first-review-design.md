@@ -63,6 +63,7 @@ type FileChange struct {
     Path    string `json:"path"`
     Added   int    `json:"added"`
     Removed int    `json:"removed"`
+    Diff    string `json:"diff,omitempty"` // unified diff content for this file
 }
 
 type TestResult struct {
@@ -279,6 +280,64 @@ When `ResolveDownstream` returns items, a line is rendered on the card (below me
 ```
 
 Full list shown in the expanded review context accordion and in the detail view.
+
+## Detail View Changes
+
+**File:** `internal/tui/detail.go`
+
+The existing detail view has 3 tabs: Fields, Plan, History. When an item has `ReviewContext != nil`, add a 4th tab: **Diffs**.
+
+### Tab layout
+
+```
+ [Fields]  [Plan]  [History]  [Diffs]
+```
+
+The Diffs tab only appears when `item.ReviewContext != nil` and at least one `FileChange` has a non-empty `Diff` field.
+
+### Diffs tab content
+
+```
+ ╔══════════════════════════════════════════════════╗
+ ║  #34 Refactor auth middleware                    ║
+ ║  [Fields]  [Plan]  [History]  [Diffs]            ║
+ ╠══════════════════════════════════════════════════╣
+ ║                                                  ║
+ ║  auth/middleware.go  (+82 -41)                   ║
+ ║  ─────────────────────────────────────────────── ║
+ ║  @@ -15,8 +15,12 @@ func AuthMiddleware(...)     ║
+ ║  -    cookie := r.Cookie("session")              ║
+ ║  -    if cookie == nil {                         ║
+ ║  +    token := r.Header.Get("Authorization")     ║
+ ║  +    if token == "" {                           ║
+ ║  +        claims, err := jwt.Parse(token)        ║
+ ║  +        if err != nil {                        ║
+ ║           ...                                    ║
+ ║                                                  ║
+ ║  auth/session.go  (+15 -8)                       ║
+ ║  ─────────────────────────────────────────────── ║
+ ║  @@ -42,4 +42,11 @@ func NewSessionStore(...)    ║
+ ║  -    return &CookieStore{...}                   ║
+ ║  +    return &JWTStore{...}                      ║
+ ║           ...                                    ║
+ ║                                                  ║
+ ╚══════════════════════════════════════════════════╝
+```
+
+### Diff rendering
+
+- Each file's diff is preceded by its filename and line-count summary as a header
+- Unified diff format with syntax coloring:
+  - Added lines (`+`): Color 2 (green)
+  - Removed lines (`-`): Color 1 (red)
+  - Hunk headers (`@@`): Color 6 (cyan, faint)
+  - Context lines: default color
+- Scrollable via `j`/`k` (existing detail scroll behavior)
+- Files separated by a horizontal rule
+
+### Diff storage considerations
+
+Diffs can be large. The `FileChange.Diff` field stores the full unified diff as a string. For the JSON board file, this means diffs are stored inline. This is acceptable for local boards (file size is not a constraint for typical code changes). For cloud boards, the `CloudStore` should handle large diffs appropriately (future consideration, out of scope).
 
 ## Human-Review Column
 
@@ -535,8 +594,10 @@ Update the skill instructions to guide the agent to:
 
 1. Determine confidence level (0-100) based on test results, code complexity, and edge case coverage
 2. Gather files changed from the current session (git diff or session context)
-3. Collect test results (which tests were added/modified, pass/fail status)
-4. Construct the review context JSON and pipe it to `ob done <ref> --confidence <N> --context-stdin`
+3. Capture unified diffs for each changed file (via `git diff` or session context)
+4. Collect test results (which tests were added/modified, pass/fail status)
+5. Collect reproduction commands — the exact commands to run the tests
+6. Construct the review context JSON and pipe it to `ob done <ref> --confidence <N> --context-stdin`
 
 The skill text should include the JSON schema for `ReviewContext` so agents know the expected format.
 
@@ -613,6 +674,9 @@ In the board state:
 - `TestPastReviews_EnterOpensDetail` — detail view opens on enter
 - `TestAgentBadge_Renders` — agent badge visible on agent-assigned cards
 - `TestConfidenceIndicator_Colors` — correct colors for confidence ranges
+- `TestDetailView_DiffsTab_Renders` — diffs tab appears when ReviewContext has diffs
+- `TestDetailView_DiffsTab_Hidden` — diffs tab not shown when no ReviewContext
+- `TestReviewContextAccordion_SeparateFromDescription` — both accordions render independently
 
 ### Golden file tests
 
