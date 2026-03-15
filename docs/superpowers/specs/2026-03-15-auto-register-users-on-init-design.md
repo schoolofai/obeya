@@ -9,12 +9,20 @@ After `ob init --agent claude-code`, the board has zero registered users. With m
 
 ## Design
 
-### What happens during `ob init --agent claude-code`
+### What happens during `ob init`
 
-After creating the board and before delegating to agent-specific setup, init auto-registers two users:
+User registration is extracted into a shared helper `registerInitUsers(eng, agentProvider)` and called from all three init paths:
+
+1. **Main path** (`ob init --agent claude-code`): registers both agent + human
+2. **Shared + agent** (`ob init --shared myboard --agent claude-code`): registers both agent + human on the shared board
+3. **Shared only** (`ob init --shared myboard`): registers human only (no agent flag provided)
+
+For paths that include `--agent`, two users are registered:
 
 1. **The agent** — name and provider derived from the `--agent` flag
 2. **The human** — name resolved from the environment
+
+For shared-only (no agent), only the human is registered.
 
 ### Agent name resolution
 
@@ -60,60 +68,64 @@ If `ob init` is run on an already-initialized board, it currently prints "Board 
 ### Pseudocode
 
 ```go
-// In cmd/init.go, after s.InitBoard() succeeds and before agent setup
+// Shared helper called from all three init paths.
+// agentProvider is "" when init is shared-only (no agent).
+func registerInitUsers(eng *engine.Engine, agentProvider string) error {
+    if agentProvider != "" {
+        agentName, err := agentDisplayName(agentProvider)
+        if err != nil {
+            return err
+        }
+        if err := eng.AddUser(agentName, "agent", agentProvider); err != nil {
+            return fmt.Errorf("failed to register agent user: %w", err)
+        }
+    }
 
-eng := engine.New(s)
+    humanName, err := resolveHumanName()
+    if err != nil {
+        return fmt.Errorf("failed to determine user name: %w", err)
+    }
+    if err := eng.AddUser(humanName, "human", "local"); err != nil {
+        return fmt.Errorf("failed to register human user: %w", err)
+    }
 
-// Register agent user
-agentName := agentDisplayName(initAgent) // "claude-code" → "Claude"
-err = eng.AddUser(agentName, "agent", initAgent)
-if err != nil && !isAlreadyExistsError(err) {
-    return fmt.Errorf("failed to register agent user: %w", err)
+    // Print registered users
+    board, _ := eng.ListBoard()
+    fmt.Println("\nUsers registered:")
+    for _, u := range board.Users {
+        fmt.Printf("  %-12s (%s, %s)\n", u.Name, u.Type, u.Provider)
+    }
+    return nil
 }
-
-// Register human user
-humanName := resolveHumanName()  // git config → OS name → username
-err = eng.AddUser(humanName, "human", "local")
-if err != nil && !isAlreadyExistsError(err) {
-    return fmt.Errorf("failed to register human user: %w", err)
-}
-
-// Print registered users
-fmt.Println("\nUsers registered:")
-board, _ := eng.ListBoard()
-for _, u := range board.Users {
-    fmt.Printf("  %-12s (%s, %s)\n", u.Name, u.Type, u.Provider)
-}
-fmt.Printf("\nReady to use: ob create task \"title\" --assign %s -d \"description\"\n", agentName)
 ```
 
 ```go
-func agentDisplayName(provider string) string {
+func agentDisplayName(provider string) (string, error) {
     names := map[string]string{
         "claude-code": "Claude",
     }
     if n, ok := names[provider]; ok {
-        return n
+        return n, nil
     }
-    return provider // fallback: use provider name as display name
+    return "", fmt.Errorf("no display name configured for agent provider %q", provider)
 }
 
-func resolveHumanName() string {
+func resolveHumanName() (string, error) {
     // 1. git config user.name
     if out, err := exec.Command("git", "config", "user.name").Output(); err == nil {
         if name := strings.TrimSpace(string(out)); name != "" {
-            return name
+            return name, nil
         }
     }
     // 2. OS display name
     if u, err := user.Current(); err == nil && u.Name != "" {
-        return u.Name
+        return u.Name, nil
     }
     // 3. OS username
     if u, err := user.Current(); err == nil {
-        return u.Username
+        return u.Username, nil
     }
-    return "human"
+    return "", fmt.Errorf("unable to determine user name: git config user.name is empty and os/user.Current() failed")
 }
 ```
 
@@ -123,11 +135,16 @@ func resolveHumanName() string {
 
 ```go
 func (e *Engine) AddUser(name, identityType, provider string) error {
+    // Preserve existing type validation
+    if err := domain.IdentityType(identityType).Validate(); err != nil {
+        return err
+    }
+
     return e.store.Transaction(func(board *domain.Board) error {
-        // Skip if user with same name already exists
+        // Skip if user with same name already exists (idempotent)
         for _, u := range board.Users {
             if strings.EqualFold(u.Name, name) {
-                return nil // idempotent — already registered
+                return nil
             }
         }
         identity := &domain.Identity{
@@ -142,24 +159,32 @@ func (e *Engine) AddUser(name, identityType, provider string) error {
 }
 ```
 
-This is a behavior change to `AddUser` — currently it allows duplicates. The new behavior silently skips duplicates, which is correct for init idempotency and also prevents accidental duplicate registrations via `ob user add`.
+This is a behavior change to `AddUser` — currently it allows duplicates. The new behavior silently skips duplicates (returns nil), which is correct for init idempotency. The `IdentityType.Validate()` call is preserved from the existing implementation.
+
+**CLI output change in `cmd/user.go`:** The `runUserAdd` function currently always prints `User "X" added`. After this change, it should check whether the user was actually created or skipped. The engine can return a sentinel (e.g., `ErrUserExists`) or the caller can check user count before/after. Simplest: `AddUser` returns a boolean `created` alongside the error, or the CLI checks `ob user list` before adding. The spec recommends adding a `bool` return: `AddUser(...) (bool, error)` where `false` means "already existed, skipped."
 
 ## Files Changed
 
 | File | Change |
 |------|--------|
-| `cmd/init.go` | Add user registration after board creation, add `agentDisplayName` and `resolveHumanName` helpers |
-| `internal/engine/engine.go` | Add duplicate name check to `AddUser` |
-| `internal/engine/engine_test.go` | Test duplicate user registration is idempotent |
-| `cmd/init_test.go` | Test that init registers both users |
+| `cmd/init.go` | Extract `registerInitUsers` helper, call from all 3 init paths, add `agentDisplayName` and `resolveHumanName` |
+| `internal/engine/engine.go` | Add duplicate name check to `AddUser`, change return to `(bool, error)` |
+| `internal/engine/engine_test.go` | Test duplicate user registration is idempotent, update callers for new return signature |
+| `cmd/init_test.go` | Test that init registers both users, test shared board paths |
+| `cmd/user.go` | Update `runUserAdd` to print "already exists" vs "added" based on `AddUser` return |
 
 ## Testing
 
 - `ob init --agent claude-code` → board has 2 users (agent + human)
-- `ob init` again on same board → no duplicate users
-- `ob user add "Claude"` after init → no duplicate created
+- `ob init --shared myboard --agent claude-code` → shared board has 2 users
+- `ob init --shared myboard` (no agent) → shared board has 1 user (human only)
+- `ob init` again on same board → no duplicate users, idempotent
+- `ob user add "Claude"` after init → prints "already exists", no duplicate
+- `ob user add "NewUser"` → prints "added", creates user
 - `ob user list` after init → shows both users with correct types
 - Non-git directory → human name falls back to OS display name
+- All 3 name resolution sources fail → hard error, no fallback
+- Unknown agent provider → hard error from `agentDisplayName`
 - Init output includes "Users registered" section
 
 ## Migration
