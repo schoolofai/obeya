@@ -35,6 +35,7 @@ type App struct {
 	picker     PickerModel
 	input      InputModel
 	dashboard  DashboardModel
+	dag        DAGModel
 	confirmMsg string
 
 	// Dimensions
@@ -111,6 +112,9 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		for i := range a.colModels {
 			a.colModels[i].SetSize(w, viewH)
 		}
+		if a.state == stateDAG {
+			a.dag.SetSize(msg.Width, msg.Height)
+		}
 		return a, nil
 	case boardLoadedMsg:
 		a.board = msg.board
@@ -119,6 +123,16 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.clampCursor()
 		if a.state == stateDashboard {
 			a.dashboard = newDashboardModel(a.board, a.width, a.height)
+		}
+		if a.state == stateDAG {
+			a.dag = newDAGModel(a.board, a.width, a.height)
+		}
+		return a, nil
+	case dagTickMsg:
+		if a.state == stateDAG {
+			a.dag.tick++
+			a.dag.updateViewport()
+			return a, dagTickCmd()
 		}
 		return a, nil
 	case errMsg:
@@ -160,6 +174,9 @@ func (a App) View() string {
 	case stateDashboard:
 		a.dashboard.SetSize(a.width, a.height)
 		return a.dashboard.View()
+	case stateDAG:
+		a.dag.SetSize(a.width, a.height)
+		return a.dag.View()
 	default:
 		return a.renderBoard()
 	}
@@ -180,6 +197,8 @@ func (a App) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return a.handleConfirmKey(msg)
 	case stateDashboard:
 		return a.handleDashboardKey(msg)
+	case stateDAG:
+		return a.handleDAGKey(msg)
 	}
 	return a, nil
 }
@@ -493,6 +512,11 @@ func (a App) handleBoardKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		a.dashboard = newDashboardModel(a.board, a.width, a.height)
 		a.prevState = stateBoard
 		a.state = stateDashboard
+	case "G":
+		a.dag = newDAGModel(a.board, a.width, a.height)
+		a.prevState = stateBoard
+		a.state = stateDAG
+		return a, dagTickCmd()
 	case "r":
 		a.err = nil
 		return a, a.loadBoard()
@@ -504,7 +528,10 @@ func (a App) handleDetailKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	item := a.detail.item
 	switch msg.String() {
 	case "esc":
-		a.state = stateBoard
+		a.state = a.prevState
+		if a.state == stateDAG {
+			return a, dagTickCmd()
+		}
 	case "q":
 		return a.quit()
 	case "tab":
@@ -563,6 +590,10 @@ func (a App) handlePickerKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 func (a App) executePickerSelection() (tea.Model, tea.Cmd) {
 	selected := a.picker.Selected()
 	item := a.selectedItem()
+	// When picker was invoked from DAG, use the DAG's selected item
+	if a.prevState == stateDAG {
+		item = a.dag.SelectedItem()
+	}
 
 	switch a.picker.kind {
 	case pickerColumn:
@@ -590,7 +621,14 @@ func (a App) executePickerSelection() (tea.Model, tea.Cmd) {
 		return a, nil
 	}
 
-	a.state = stateBoard
+	returnState := a.prevState
+	if returnState == 0 {
+		returnState = stateBoard
+	}
+	a.state = returnState
+	if returnState == stateDAG {
+		return a, tea.Batch(a.loadBoard(), dagTickCmd())
+	}
 	return a, a.loadBoard()
 }
 
@@ -687,6 +725,49 @@ func (a App) handleDashboardKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	case "R", "r":
 		a.dashboard = newDashboardModel(a.board, a.width, a.height)
+	}
+	return a, nil
+}
+
+func (a App) handleDAGKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "G", "esc":
+		a.state = stateBoard
+		return a, nil
+	case "q", "ctrl+c":
+		return a.quit()
+	case "j", "down":
+		a.dag.moveToNextNode()
+	case "k", "up":
+		a.dag.moveToPrevNode()
+	case "h", "left":
+		a.dag.scrollLeft()
+	case "l", "right":
+		a.dag.scrollRight()
+	case "enter":
+		if item := a.dag.SelectedItem(); item != nil {
+			a.detail = newDetailModel(item, a.board)
+			a.prevState = stateDAG
+			a.state = stateDetail
+		}
+	case "D":
+		a.dashboard = newDashboardModel(a.board, a.width, a.height)
+		a.prevState = stateDAG
+		a.state = stateDashboard
+	case "0":
+		a.dag.autoScrollToInProgress()
+		a.dag.updateViewport()
+	case "m":
+		if item := a.dag.SelectedItem(); item != nil {
+			a.picker = newPickerModel(
+				fmt.Sprintf("Move #%d to:", item.DisplayNum),
+				pickerColumn, a.columns,
+			)
+			a.state = statePicker
+			a.prevState = stateDAG
+		}
+	case "r":
+		return a, a.loadBoard()
 	}
 	return a, nil
 }

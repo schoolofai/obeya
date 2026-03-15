@@ -46,6 +46,19 @@ changelog:
       - "^test:"
       - "^chore:"
 
+nfpms:
+  - id: obeya
+    package_name: obeya
+    vendor: schoolofai
+    homepage: "https://github.com/schoolofai/obeya"
+    maintainer: "schoolofai"
+    description: "CLI Kanban board for humans and AI agents"
+    license: "MIT"
+    formats:
+      - deb
+      - rpm
+    bindir: /usr/local/bin
+
 brews:
   - repository:
       owner: schoolofai
@@ -60,3 +73,12 @@ brews:
       bin.install "ob"
     test: |
       system "#{bin}/ob", "--help"
+
+scoops:
+  - repository:
+      owner: schoolofai
+      name: scoop-obeya
+      token: "{{ .Env.SCOOP_BUCKET_TOKEN }}"
+    homepage: "https://github.com/schoolofai/obeya"
+    description: "CLI Kanban board for humans and AI agents"
+    license: "MIT"

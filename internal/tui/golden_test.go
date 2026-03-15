@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"bytes"
 	"testing"
 	"time"
 
@@ -88,5 +89,50 @@ func TestGolden_InProgressColumn(t *testing.T) {
 	tm.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("l")})
 	time.Sleep(50 * time.Millisecond)
 	screen := getScreen(t, tm)
+	teatest.RequireEqualOutput(t, []byte(screen))
+}
+
+// TestGolden_DAGView captures the DAG view at 120x40 with hierarchy board.
+func TestGolden_DAGView(t *testing.T) {
+	boardFile, eng := testDAGBoard(t)
+	app := NewApp(eng, boardFile)
+	tm := teatest.NewTestModel(t, app, teatest.WithInitialTermSize(120, 40))
+	teatest.WaitFor(t, tm.Output(), func(bts []byte) bool {
+		return bytes.Contains(bts, []byte("BACKLOG"))
+	}, teatest.WithDuration(3*time.Second), teatest.WithCheckInterval(50*time.Millisecond))
+	time.Sleep(100 * time.Millisecond)
+
+	// Enter DAG view
+	tm.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("G")})
+	teatest.WaitFor(t, tm.Output(), func(bts []byte) bool {
+		return bytes.Contains(bts, []byte("DAG View"))
+	}, teatest.WithDuration(3*time.Second), teatest.WithCheckInterval(50*time.Millisecond))
+	time.Sleep(100 * time.Millisecond)
+
+	screen := getDAGScreen(t, tm)
+	teatest.RequireEqualOutput(t, []byte(screen))
+}
+
+// TestGolden_DAGView_Navigate captures the DAG after moving to next node.
+func TestGolden_DAGView_Navigate(t *testing.T) {
+	boardFile, eng := testDAGBoard(t)
+	app := NewApp(eng, boardFile)
+	tm := teatest.NewTestModel(t, app, teatest.WithInitialTermSize(120, 40))
+	teatest.WaitFor(t, tm.Output(), func(bts []byte) bool {
+		return bytes.Contains(bts, []byte("BACKLOG"))
+	}, teatest.WithDuration(3*time.Second), teatest.WithCheckInterval(50*time.Millisecond))
+	time.Sleep(100 * time.Millisecond)
+
+	tm.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("G")})
+	teatest.WaitFor(t, tm.Output(), func(bts []byte) bool {
+		return bytes.Contains(bts, []byte("DAG View"))
+	}, teatest.WithDuration(3*time.Second), teatest.WithCheckInterval(50*time.Millisecond))
+	time.Sleep(100 * time.Millisecond)
+
+	// Navigate to next node
+	tm.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
+	time.Sleep(100 * time.Millisecond)
+
+	screen := getDAGScreen(t, tm)
 	teatest.RequireEqualOutput(t, []byte(screen))
 }
