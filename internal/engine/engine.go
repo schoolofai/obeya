@@ -2,6 +2,7 @@ package engine
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/niladribose/obeya/internal/domain"
@@ -218,12 +219,18 @@ func (e *Engine) ListBoard() (*domain.Board, error) {
 	return e.store.LoadBoard()
 }
 
-func (e *Engine) AddUser(name, identityType, provider string) error {
+func (e *Engine) AddUser(name, identityType, provider string) (bool, error) {
 	if err := domain.IdentityType(identityType).Validate(); err != nil {
-		return err
+		return false, err
 	}
 
-	return e.store.Transaction(func(board *domain.Board) error {
+	added := false
+	err := e.store.Transaction(func(board *domain.Board) error {
+		for _, u := range board.Users {
+			if strings.EqualFold(u.Name, name) {
+				return nil
+			}
+		}
 		identity := &domain.Identity{
 			ID:       domain.GenerateID(),
 			Name:     name,
@@ -231,8 +238,10 @@ func (e *Engine) AddUser(name, identityType, provider string) error {
 			Provider: provider,
 		}
 		board.Users[identity.ID] = identity
+		added = true
 		return nil
 	})
+	return added, err
 }
 
 func (e *Engine) RemoveUser(ref string) error {

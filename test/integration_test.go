@@ -19,7 +19,7 @@ func setupTestEngine(t *testing.T) *engine.Engine {
 		t.Fatalf("InitBoard failed: %v", err)
 	}
 	eng := engine.New(s)
-	_ = eng.AddUser("testuser", "human", "local")
+	_, _ = eng.AddUser("testuser", "human", "local")
 	return eng
 }
 
@@ -45,10 +45,10 @@ func TestIntegration_FullFlow(t *testing.T) {
 	}
 
 	// --- Add users ---
-	if err := eng.AddUser("alice", "human", ""); err != nil {
+	if _, err := eng.AddUser("alice", "human", ""); err != nil {
 		t.Fatalf("AddUser (human) failed: %v", err)
 	}
-	if err := eng.AddUser("bot-1", "agent", "claude"); err != nil {
+	if _, err := eng.AddUser("bot-1", "agent", "claude"); err != nil {
 		t.Fatalf("AddUser (agent) failed: %v", err)
 	}
 
@@ -242,7 +242,7 @@ func TestIntegration_AssignAndEdit(t *testing.T) {
 	eng := setupTestEngine(t)
 
 	// Add a user
-	if err := eng.AddUser("dev1", "human", ""); err != nil {
+	if _, err := eng.AddUser("dev1", "human", ""); err != nil {
 		t.Fatalf("AddUser failed: %v", err)
 	}
 
@@ -319,15 +319,15 @@ func TestIntegration_BoardConfig(t *testing.T) {
 func TestIntegration_UserManagement(t *testing.T) {
 	eng := setupTestEngine(t)
 
-	if err := eng.AddUser("alice", "human", ""); err != nil {
+	if _, err := eng.AddUser("alice", "human", ""); err != nil {
 		t.Fatalf("AddUser failed: %v", err)
 	}
-	if err := eng.AddUser("claude", "agent", "anthropic"); err != nil {
+	if _, err := eng.AddUser("claude", "agent", "anthropic"); err != nil {
 		t.Fatalf("AddUser (agent) failed: %v", err)
 	}
 
 	// Invalid identity type
-	if err := eng.AddUser("bad", "robot", ""); err == nil {
+	if _, err := eng.AddUser("bad", "robot", ""); err == nil {
 		t.Error("expected error for invalid identity type")
 	}
 
@@ -392,7 +392,7 @@ func TestIntegration_CustomColumns(t *testing.T) {
 	}
 
 	eng := engine.New(s)
-	_ = eng.AddUser("testuser", "human", "local")
+	_, _ = eng.AddUser("testuser", "human", "local")
 	board, _ := eng.ListBoard()
 	if len(board.Columns) != 3 {
 		t.Errorf("expected 3 columns, got %d", len(board.Columns))
@@ -520,7 +520,7 @@ func TestIntegration_AssignThenMoveFlow(t *testing.T) {
 	eng := engine.New(s)
 
 	// Register a user
-	if err := eng.AddUser("agent-1", "agent", "claude-code"); err != nil {
+	if _, err := eng.AddUser("agent-1", "agent", "claude-code"); err != nil {
 		t.Fatalf("AddUser failed: %v", err)
 	}
 
@@ -622,7 +622,7 @@ func TestIntegration_AllGuardsBlockUnassigned(t *testing.T) {
 	s := store.NewJSONStore(tmpDir)
 	_ = s.InitBoard("guard-test", nil)
 	eng := engine.New(s)
-	_ = eng.AddUser("user1", "human", "local")
+	_, _ = eng.AddUser("user1", "human", "local")
 
 	// Create a blocker item (assigned)
 	blocker, _ := eng.CreateItem("task", "Blocker", "", "desc", "medium", "user1", nil)

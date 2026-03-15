@@ -66,11 +66,16 @@ func runUserAdd(cmd *cobra.Command, args []string) {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
-	if err := eng.AddUser(args[0], flagUserType, flagUserProvider); err != nil {
+	added, err := eng.AddUser(args[0], flagUserType, flagUserProvider)
+	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
-	fmt.Printf("User %q added\n", args[0])
+	if added {
+		fmt.Printf("User %q added\n", args[0])
+	} else {
+		fmt.Printf("User %q already exists\n", args[0])
+	}
 }
 
 func runUserList(cmd *cobra.Command, args []string) {

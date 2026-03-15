@@ -15,7 +15,7 @@ func setupEngine(t *testing.T) (*engine.Engine, store.Store) {
 	s := store.NewJSONStore(dir)
 	_ = s.InitBoard("test", nil)
 	eng := engine.New(s)
-	_ = eng.AddUser("testuser", "human", "local")
+	_, _ = eng.AddUser("testuser", "human", "local")
 	return eng, s
 }
 
@@ -230,7 +230,7 @@ func TestAssignItem(t *testing.T) {
 	eng, _ := setupEngine(t)
 
 	task, _ := eng.CreateItem("task", "Task", "", "", "medium", "testuser", nil)
-	_ = eng.AddUser("Dev", "human", "local")
+	_, _ = eng.AddUser("Dev", "human", "local")
 
 	board, _ := eng.ListBoard()
 	var userID string
@@ -313,9 +313,12 @@ func TestDeleteItem_WithChildren(t *testing.T) {
 func TestAddUser(t *testing.T) {
 	eng, _ := setupEngine(t)
 
-	err := eng.AddUser("Claude Agent", "agent", "claude-code")
+	added, err := eng.AddUser("Claude Agent", "agent", "claude-code")
 	if err != nil {
 		t.Fatalf("AddUser failed: %v", err)
+	}
+	if !added {
+		t.Error("expected added=true for new user")
 	}
 
 	board, _ := eng.ListBoard()
@@ -337,10 +340,51 @@ func TestAddUser(t *testing.T) {
 	}
 }
 
+func TestAddUser_DuplicateIsIdempotent(t *testing.T) {
+	eng, _ := setupEngine(t)
+
+	added1, err := eng.AddUser("Claude", "agent", "claude-code")
+	if err != nil {
+		t.Fatalf("first AddUser failed: %v", err)
+	}
+	if !added1 {
+		t.Error("expected added=true for first add")
+	}
+
+	// Exact duplicate
+	added2, err := eng.AddUser("Claude", "agent", "claude-code")
+	if err != nil {
+		t.Fatalf("duplicate AddUser failed: %v", err)
+	}
+	if added2 {
+		t.Error("expected added=false for duplicate")
+	}
+
+	// Case-insensitive duplicate
+	added3, err := eng.AddUser("claude", "agent", "claude-code")
+	if err != nil {
+		t.Fatalf("case-insensitive AddUser failed: %v", err)
+	}
+	if added3 {
+		t.Error("expected added=false for case-insensitive duplicate")
+	}
+
+	board, _ := eng.ListBoard()
+	count := 0
+	for _, u := range board.Users {
+		if strings.EqualFold(u.Name, "claude") {
+			count++
+		}
+	}
+	if count != 1 {
+		t.Errorf("expected 1 'Claude' user, got %d", count)
+	}
+}
+
 func TestAddUser_InvalidType(t *testing.T) {
 	eng, _ := setupEngine(t)
 
-	err := eng.AddUser("Bot", "robot", "local")
+	_, err := eng.AddUser("Bot", "robot", "local")
 	if err == nil {
 		t.Error("expected error for invalid identity type")
 	}
@@ -349,7 +393,7 @@ func TestAddUser_InvalidType(t *testing.T) {
 func TestRemoveUser(t *testing.T) {
 	eng, _ := setupEngine(t)
 
-	_ = eng.AddUser("Dev", "human", "local")
+	_, _ = eng.AddUser("Dev", "human", "local")
 
 	board, _ := eng.ListBoard()
 	var devID string
