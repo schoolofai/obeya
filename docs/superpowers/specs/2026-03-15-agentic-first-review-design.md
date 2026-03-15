@@ -53,6 +53,7 @@ type ReviewContext struct {
     TestsWritten []TestResult `json:"tests_written,omitempty"`  // test outcomes
     Proof        []ProofItem  `json:"proof,omitempty"`          // evidence for confidence
     Reasoning    string       `json:"reasoning,omitempty"`      // agent decision rationale
+    Reproduce    []string     `json:"reproduce,omitempty"`      // commands to reproduce/verify tests
 }
 
 // Note: Downstream impact (items unblocked by this item) is computed at render
@@ -187,9 +188,17 @@ Cards where the assignee's `Identity.Type == "agent"` render a badge:
  │ task ●●  confidence: 45% ⚠  │
  │ ▲ #10 Auth Rewrite          │
  │ @claude  sponsor: @niladri  │
+ │ ⚡ unblocks 3 tasks          │
+ │ ▶ description               │
  │ ▶ review context            │
  ╰──────────────────────────────╯
 ```
+
+The card shows **two separate accordions** when `ReviewContext != nil`:
+- `▶ description` — the existing description accordion (`v` key)
+- `▶ review context` — a new accordion (`V` key, uppercase), only rendered when `item.ReviewContext != nil`
+
+When `ReviewContext` is nil (human tasks or agent tasks not yet completed), only the description accordion is shown.
 
 TUI uses a colored text badge `AGENT` (lipgloss Color 5, magenta) since emoji rendering is unreliable in terminals.
 
@@ -215,9 +224,18 @@ Rendered on the meta line after assignee when `item.Sponsor != ""`:
 
 No inheritance resolution at render time — the value is read directly from the item.
 
-### Review context accordion
+### Review context accordion (separate from description)
 
-When an item has `ReviewContext != nil`, the description accordion (`v` key) shows review context instead of the plain description. The `v` key guard in `handleBoardKey` must be updated: currently it checks `item.Description != ""`, but it should also trigger when `item.ReviewContext != nil`. The updated guard is `item.Description != "" || item.ReviewContext != nil`:
+The review context accordion is a **separate, independent accordion** alongside the existing description accordion. It is not a replacement — both can be expanded simultaneously.
+
+| Accordion | Key | Guard | Scroll keys |
+|---|---|---|---|
+| Description | `v` (lowercase) | `item.Description != ""` (unchanged) | `J`/`K` (existing) |
+| Review context | `V` (uppercase) | `item.ReviewContext != nil` | `Ctrl+J`/`Ctrl+K` (new) |
+
+The `▶ review context` line is only rendered on the card when `item.ReviewContext != nil`. It does not appear at all on items without review context.
+
+**Expanded review context:**
 
 ```
  ▼ review context
@@ -230,6 +248,11 @@ When an item has `ReviewContext != nil`, the description accordion (`v` key) sho
 
   Tests:  4 new, 2 modified (all pass)
 
+  Reproduce:
+    $ go test ./internal/auth/ -run TestJWT
+    $ go test ./internal/auth/ -run TestSession
+    $ go test ./internal/auth/ -v
+
   Proof:
     ✓ 4/4 tests pass
     ✓ go vet clean
@@ -239,11 +262,13 @@ When an item has `ReviewContext != nil`, the description accordion (`v` key) sho
   ⚡ Unblocks: #31, #32, #35
 ```
 
-The existing description field is still available in the detail view's Fields tab. The accordion prioritizes review context when present because that is what the reviewer needs at glance.
+The `Reproduce` section shows the exact commands the reviewer can copy-paste to run the agent's tests themselves. This is critical for verification — the reviewer can confirm the agent's proof claims independently.
 
-**Scroll handling:** The existing `clampDescScroll` function operates on `item.Description` lines only. When `ReviewContext != nil` and the accordion shows review context, `clampDescScroll` must be generalized to compute scroll bounds from the rendered review context content (not `item.Description`). Without this, `J`/`K` scroll keys will break for review context. Create a `reviewContextLines(rc *ReviewContext, width int) []string` helper that produces the wrapped text lines for scroll calculation, paralleling how `item.Description` is currently split into lines.
+**Scroll handling:** Each accordion tracks its own scroll offset independently. The existing `descScroll` field in the App model handles description scrolling. Add a new `reviewScroll` field for review context scrolling. `clampDescScroll` remains unchanged for description; create a parallel `clampReviewScroll` function that computes scroll bounds from the rendered review context lines.
 
-**Render function:** Create a separate `renderReviewContext(rc *ReviewContext, width int) string` function rather than extending `renderDescription`, to respect the 50-line function limit.
+**Render functions:** Create separate functions to respect the 50-line function limit:
+- `renderReviewContext(rc *ReviewContext, width int) string` — renders the full review context block
+- `reviewContextLines(rc *ReviewContext, width int) []string` — produces wrapped lines for scroll calculation
 
 ### Downstream impact
 
@@ -458,6 +483,8 @@ ob done 34 \
   --purpose "Replace cookie sessions with JWT" \
   --files "auth/middleware.go:+82-41,auth/session.go:+15-8" \
   --tests "TestJWTValidation:pass,TestSessionMigration:pass" \
+  --reproduce "go test ./internal/auth/ -run TestJWT" \
+  --reproduce "go test ./internal/auth/ -v" \
   --proof "go vet clean:pass,edge case tests:fail:No concurrent session tests" \
   --reasoning "JWT chosen over opaque tokens for debuggability"
 ```
