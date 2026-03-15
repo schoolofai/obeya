@@ -23,7 +23,7 @@ The board must serve human judgment, not just task tracking.
 3. **Context at point of decision** — everything needed to review is on the card, no context-switching
 4. **Low cognitive load** — confidence sorting does the triage, humans just work top to bottom
 5. **Feature parity** — TUI and web should implement the same capabilities; web implementation is tracked separately
-6. **Sponsor at initiative level** — humans own outcomes (epics/stories), not micro-tasks
+6. **Deterministic sponsorship** — every agent-created item has a human sponsor, resolved and stored at creation time
 
 ## Data Model Changes
 
@@ -84,21 +84,45 @@ type HumanReview struct {
 }
 ```
 
-### Sponsor inheritance
+### Sponsor resolution (deterministic)
 
-Sponsor is resolved by walking up the parent chain:
+Sponsor is resolved at **creation time** and stored directly on every item. There is no render-time parent-chain walking — every item carries its own sponsor value.
 
+**Invariant:** `ob init` always registers at least 1 human and 1 agent on the board. This guarantees a human exists for auto-assignment.
+
+```go
+// resolveSponsor is called inside CreateItem and CompleteItemWithContext.
+// It returns the sponsor ID to store on the item, or an error.
+func resolveSponsor(board Board, assignee string, explicitSponsor string, parentRef string) (string, error)
 ```
-func ResolveSponsor(item Item, board Board) string
-```
 
-1. If `item.Sponsor != ""`, return it
-2. If `item.ParentID != ""`, recurse on parent
-3. Return `""` (no sponsor)
+Resolution order:
 
-**Constraint:** If an agent creates an item with no parent, `Sponsor` is required. Enforced in `engine.CreateItem` when the acting identity is an agent and `ParentID` is empty.
+1. If the acting identity (`board.Users[assignee]`) is human → return `""` (humans don't need sponsors, they are the owner)
+2. If `explicitSponsor != ""` → validate it references a human identity in `board.Users` → return it
+3. If the board has exactly 1 human → auto-assign that human as sponsor (zero friction, fully deterministic)
+4. If `parentRef != ""` and the parent has a non-empty `Sponsor` → copy the parent's sponsor value onto this item (copy, not reference — the child owns its own value)
+5. If none of the above resolve → **hard fail** with actionable error:
+   ```
+   Error: board has N humans. Specify --sponsor: alice, bob, carol
+   ```
 
-**Known limitation:** If a sponsor identity is later removed from the board, `ResolveSponsor` will return a dangling reference (the string ID of a removed user). Rendering handles this gracefully — display the raw ID string. No validation in `ResolveSponsor` itself; it is a pure lookup.
+**Why copy-on-create instead of inheritance:**
+- No render-time resolution needed — just read `item.Sponsor`
+- Parent deletion doesn't orphan children's sponsorship
+- No recursive parent-chain walking — O(1) lookup
+- Every item is self-contained and queryable ("show me everything I sponsor")
+
+**Edge cases:**
+
+| Scenario | Behavior |
+|---|---|
+| 1 human on board, agent creates anything | Auto-assigned to that human, no flag needed |
+| N humans, agent creates under epic with sponsor | Copied from parent, stored on child |
+| N humans, agent creates orphan, no `--sponsor` | Hard fail with human names listed |
+| Human creates anything | Sponsor field left empty (human IS the owner) |
+| Parent deleted after child created | Child retains its own sponsor copy |
+| Sponsor identity removed from board | Sponsor string persists as dangling reference; rendering displays raw ID gracefully |
 
 ### Downstream resolution
 
@@ -181,13 +205,13 @@ When `Confidence == nil` (unset), no indicator is shown. This is distinct from `
 
 ### Sponsor line
 
-Rendered on the meta line after assignee when `ResolveSponsor` returns a non-empty value:
+Rendered on the meta line after assignee when `item.Sponsor != ""`:
 
 ```
 @claude  sponsor: @niladri
 ```
 
-If sponsor is inherited, the sponsor name is rendered in faint style.
+No inheritance resolution at render time — the value is read directly from the item.
 
 ### Review context accordion
 
@@ -346,18 +370,17 @@ All non-CLI call sites pass `""` for sponsor (the CLI is the only place the flag
 
 Note: `CloudClient.CreateItem` takes a `*domain.Item` directly (not the engine method). Adding `Sponsor` to `domain.Item` is a zero-value-safe change (empty string), so cloud sync won't break. However, the cloud sync path must be verified to correctly round-trip the `Sponsor` field through serialization.
 
-The `actor` identity is resolved from the `assignee` parameter by looking up `board.Users[assignee]`. Sponsor validation:
+Sponsor is resolved deterministically via `resolveSponsor(board, assignee, sponsor, parentRef)` (see Sponsor resolution section). The resolved value is stored directly on the new item's `Sponsor` field.
 
 ```go
-actor := board.Users[assignee]
-if actor.Type == "agent" && parentRef == "" && sponsor == "" {
-    return nil, fmt.Errorf("agent-created items without a parent require --sponsor")
+resolvedSponsor, err := resolveSponsor(board, assignee, sponsor, parentRef)
+if err != nil {
+    return nil, err  // hard fail with actionable message
 }
+item.Sponsor = resolvedSponsor
 ```
 
-When `sponsor` is non-empty, it is validated against `board.Users` to ensure it references a human identity.
-
-New `--sponsor` flag on `ob create` commands.
+New `--sponsor` flag on `ob create` commands. Optional when the board has exactly 1 human (auto-assigned). Required when the board has multiple humans and the item has no parent with a sponsor.
 
 ### ReviewItem (new operation)
 
@@ -525,9 +548,11 @@ In the board state:
 - `TestReviewItem_Reviewed` — verify status change and history entry
 - `TestReviewItem_Hidden` — verify status change
 - `TestReviewItem_AgentCannotReview` — verify agent identity is rejected
-- `TestResolveSponsor_Direct` — sponsor set on item
-- `TestResolveSponsor_Inherited` — sponsor inherited from parent epic
-- `TestResolveSponsor_OrphanRequiresSponsor` — agent + no parent + no sponsor = error
+- `TestResolveSponsor_Explicit` — explicit --sponsor flag stored on item
+- `TestResolveSponsor_AutoAssignSingleHuman` — 1 human on board, auto-assigned without flag
+- `TestResolveSponsor_CopiedFromParent` — sponsor copied from parent, stored on child
+- `TestResolveSponsor_MultipleHumansNoSponsor` — N humans, no parent, no flag = hard fail with names
+- `TestResolveSponsor_HumanCreatesItem` — human actor, sponsor field left empty
 - `TestResolveDownstream` — verify blocked items are returned
 - `TestCompleteItemWithContext_HumanIdentityAllowed` — humans can also provide review context (not agent-only)
 
