@@ -9,6 +9,7 @@ const (
 	stateInput
 	stateConfirm
 	stateDashboard
+	stateDAG
 )
 
 type pickerKind int

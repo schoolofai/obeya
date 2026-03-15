@@ -39,7 +39,7 @@ func (a App) renderBoard() string {
 	header := fmt.Sprintf("  Obeya Board: %s", a.board.Name)
 	help := helpStyle.Render(
 		"  h/l:columns  j/k:items  v:desc  m:move  a:assign  c:create  d:delete  " +
-			"p:priority  Enter:detail  Space:collapse  /:search  r:reload  q:quit",
+			"p:priority  Enter:detail  Space:collapse  /:search  G:dag  D:dash  r:reload  q:quit",
 	)
 	return header + "\n" + board + "\n" + help
 }
