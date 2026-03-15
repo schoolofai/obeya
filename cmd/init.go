@@ -3,10 +3,13 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"os/exec"
+	"os/user"
 	"path/filepath"
 	"strings"
 
 	"github.com/niladribose/obeya/internal/agent"
+	"github.com/niladribose/obeya/internal/engine"
 	"github.com/niladribose/obeya/internal/store"
 	"github.com/spf13/cobra"
 )
@@ -45,9 +48,9 @@ var initCmd = &cobra.Command{
 			return initSharedBoardWithAgent(initShared, initAgent, columns)
 		}
 
-		// Shared board path (no agent)
+		// Shared without agent is no longer supported
 		if initShared != "" {
-			return initSharedBoard(initShared, columns)
+			return fmt.Errorf("--shared requires --agent. Supported agents: %s", strings.Join(agent.SupportedNames(), ", "))
 		}
 
 		// --agent is required for non-shared boards
@@ -86,6 +89,11 @@ var initCmd = &cobra.Command{
 			} else {
 				fmt.Println("Columns: backlog, todo, in-progress, review, done")
 			}
+		}
+
+		// Register agent and human users
+		if err := registerInitUsers(s, initAgent); err != nil {
+			return err
 		}
 
 		// Delegate to agent-specific setup
@@ -131,6 +139,12 @@ func initSharedBoardWithAgent(sharedName, agentName string, columns []string) er
 	}
 	boardDir := store.SharedBoardDir(obeyaHome, sharedName)
 
+	// Register agent and human users
+	s := store.NewJSONStore(boardDir)
+	if err := registerInitUsers(s, agentName); err != nil {
+		return err
+	}
+
 	ctx := agent.AgentContext{
 		Root:       boardDir,
 		BoardName:  sharedName,
@@ -171,6 +185,67 @@ func parseColumns(raw string) []string {
 		parts[i] = strings.TrimSpace(parts[i])
 	}
 	return parts
+}
+
+func agentDisplayName(provider string) (string, error) {
+	switch provider {
+	case "claude-code":
+		return "Claude", nil
+	default:
+		return "", fmt.Errorf("unknown agent provider %q — cannot determine display name", provider)
+	}
+}
+
+func resolveHumanName() (string, error) {
+	out, err := exec.Command("git", "config", "user.name").Output()
+	if err == nil {
+		name := strings.TrimSpace(string(out))
+		if name != "" {
+			return name, nil
+		}
+	}
+
+	u, err := user.Current()
+	if err == nil {
+		if u.Name != "" {
+			return u.Name, nil
+		}
+		if u.Username != "" {
+			return u.Username, nil
+		}
+	}
+
+	return "", fmt.Errorf("cannot determine human user name: git config user.name is empty and os/user lookup failed")
+}
+
+func registerInitUsers(s store.Store, agentProvider string) error {
+	eng := engine.New(s)
+
+	agentName, err := agentDisplayName(agentProvider)
+	if err != nil {
+		return err
+	}
+	added, err := eng.AddUser(agentName, "agent", agentProvider)
+	if err != nil {
+		return fmt.Errorf("failed to register agent user: %w", err)
+	}
+	if added {
+		fmt.Printf("Registered agent user: %s\n", agentName)
+	}
+
+	humanName, err := resolveHumanName()
+	if err != nil {
+		return err
+	}
+	added, err = eng.AddUser(humanName, "human", "local")
+	if err != nil {
+		return fmt.Errorf("failed to register human user: %w", err)
+	}
+	if added {
+		fmt.Printf("Registered human user: %s\n", humanName)
+	}
+
+	return nil
 }
 
 func resolveInitRoot() (string, error) {
