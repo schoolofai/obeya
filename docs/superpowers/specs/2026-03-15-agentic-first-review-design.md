@@ -168,6 +168,8 @@ In the `App.Init()` or board-loading path, after populating `a.columns` from the
 
 On a 120-char terminal with 6 columns, each column is ~18 chars (near the existing minimum cap). This is acceptable.
 
+**Empty state:** When there are no items to show in the review queue (all hidden or no agent-completed items in done), the virtual column is not rendered at all. The board columns reclaim the full terminal width. The column only appears when there is at least one visible item to review.
+
 **Item filtering:** The existing `visibleItemsInColumn` filters by `item.Status == colName`. Since no item has `Status == "human-review"`, this function needs a special case: when the column name is `"human-review"`, use the review filter criteria (Status == "done", ReviewContext != nil, HumanReview.Status != "hidden") instead of status matching. Sort the results by Confidence ascending.
 
 ## Card Rendering Changes
@@ -257,15 +259,31 @@ Full list shown in the expanded review context accordion and in the detail view.
 
 **File:** `internal/tui/board.go` (new rendering logic)
 
-### Column header
+### Column header — visually distinct from workflow columns
+
+The virtual column uses a different header treatment to communicate "this is a prioritized review queue, not a workflow stage":
 
 ```
- HUMAN-REVIEW (3)
- [View All Past Reviews]
- ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+ ┌─── ⚡ REVIEW QUEUE ───┐
+ │  sorted by confidence  │
+ │  [P] past reviews      │
+ │ ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄ │
 ```
 
-The `[View All Past Reviews]` link is rendered at the top of the column. In TUI, pressing `P` (past reviews) when the cursor is in the human-review column opens the Past Reviews pane.
+Key differences from regular column headers:
+- **Title:** `⚡ REVIEW QUEUE (N)` instead of a status name — communicates purpose, not workflow stage
+- **Subtitle:** `sorted by confidence` — self-documenting sort order
+- **Past reviews link:** `[P] past reviews` — reminds user of the key binding
+- **Color:** Column border and header use Color 3 (yellow/amber) instead of Color 6 (cyan) used by regular columns. This creates an immediate visual break.
+- **Active state:** When cursor is in this column, border uses bright yellow (Color 11) instead of bright cyan (Color 14)
+
+Regular columns for comparison:
+```
+ ┌── DONE (4) ──────────┐
+ │                       │
+```
+
+The `[P]` link text is rendered in faint style. Pressing `P` from any column opens the Past Reviews pane.
 
 ### Card states and styling
 
