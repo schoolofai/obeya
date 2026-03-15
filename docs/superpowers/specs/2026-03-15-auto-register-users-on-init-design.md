@@ -11,18 +11,19 @@ After `ob init --agent claude-code`, the board has zero registered users. With m
 
 ### What happens during `ob init`
 
-User registration is extracted into a shared helper `registerInitUsers(eng, agentProvider)` and called from all three init paths:
+The `--agent` flag is mandatory on ALL init paths (including shared boards). This ensures every board always has both users registered from the start.
+
+User registration is extracted into a shared helper `registerInitUsers(eng, agentProvider)` and called from all init paths:
 
 1. **Main path** (`ob init --agent claude-code`): registers both agent + human
 2. **Shared + agent** (`ob init --shared myboard --agent claude-code`): registers both agent + human on the shared board
-3. **Shared only** (`ob init --shared myboard`): registers human only (no agent flag provided)
 
-For paths that include `--agent`, two users are registered:
+The previous shared-only path (`ob init --shared myboard` without `--agent`) now returns an error requiring `--agent`.
+
+Two users are always registered:
 
 1. **The agent** — name and provider derived from the `--agent` flag
 2. **The human** — name resolved from the environment
-
-For shared-only (no agent), only the human is registered.
 
 ### Agent name resolution
 
@@ -177,7 +178,7 @@ This is a behavior change to `AddUser` — currently it allows duplicates. The n
 
 - `ob init --agent claude-code` → board has 2 users (agent + human)
 - `ob init --shared myboard --agent claude-code` → shared board has 2 users
-- `ob init --shared myboard` (no agent) → shared board has 1 user (human only)
+- `ob init --shared myboard` (no agent) → error: `--agent` is required
 - `ob init` again on same board → no duplicate users, idempotent
 - `ob user add "Claude"` after init → prints "already exists", no duplicate
 - `ob user add "NewUser"` → prints "added", creates user
