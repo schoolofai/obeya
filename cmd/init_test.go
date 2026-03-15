@@ -1,6 +1,7 @@
 package cmd_test
 
 import (
+	"encoding/json"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -80,15 +81,37 @@ func TestInit_RegistersBothUsers(t *testing.T) {
 		t.Errorf("expected human registration message, got: %s", output)
 	}
 
-	// Verify users via ob user list
-	listCmd := exec.Command(bin, "user", "list")
+	// Verify users via ob user list --format json
+	listCmd := exec.Command(bin, "user", "list", "--format", "json")
 	listCmd.Dir = dir
 	listOut, err := listCmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("user list failed: %s", listOut)
 	}
-	if !strings.Contains(string(listOut), "Claude") {
-		t.Errorf("expected Claude in user list, got: %s", listOut)
+
+	var users map[string]struct {
+		Name     string `json:"name"`
+		Type     string `json:"type"`
+		Provider string `json:"provider"`
+	}
+	if err := json.Unmarshal(listOut, &users); err != nil {
+		t.Fatalf("failed to parse user list JSON: %v\n%s", err, listOut)
+	}
+
+	var hasAgent, hasHuman bool
+	for _, u := range users {
+		if u.Name == "Claude" && u.Type == "agent" && u.Provider == "claude-code" {
+			hasAgent = true
+		}
+		if u.Type == "human" {
+			hasHuman = true
+		}
+	}
+	if !hasAgent {
+		t.Errorf("expected agent user 'Claude' with type=agent, provider=claude-code in user list: %s", listOut)
+	}
+	if !hasHuman {
+		t.Errorf("expected a human user in user list: %s", listOut)
 	}
 }
 
@@ -119,10 +142,12 @@ func TestInit_IdempotentUsers(t *testing.T) {
 		t.Fatalf("user list failed: %s", listOut)
 	}
 
-	// Each user entry has an "id" field — count occurrences
-	idCount := strings.Count(string(listOut), `"id"`)
-	if idCount != 2 {
-		t.Errorf("expected 2 users after double init, got %d: %s", idCount, listOut)
+	var users map[string]json.RawMessage
+	if err := json.Unmarshal(listOut, &users); err != nil {
+		t.Fatalf("failed to parse user list JSON: %v\n%s", err, listOut)
+	}
+	if len(users) != 2 {
+		t.Errorf("expected exactly 2 users after double init, got %d: %s", len(users), listOut)
 	}
 }
 
