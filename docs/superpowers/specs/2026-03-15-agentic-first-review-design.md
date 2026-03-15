@@ -693,9 +693,82 @@ Existing boards have no `Sponsor`, `Confidence`, `ReviewContext`, or `HumanRevie
 
 Items already in `done` without `ReviewContext` are treated as human-completed and do not appear in the human-review column.
 
+## Web UI
+
+**File:** `web/` (Next.js frontend, Appwrite backend)
+
+The web UI implements the same features as the TUI with web-appropriate adaptations. The data model, engine operations, and API are shared — only the presentation layer differs.
+
+### Feature parity mapping
+
+| Feature | TUI | Web |
+|---|---|---|
+| Agent badge | `AGENT` text badge, Color 5 | Pill badge with icon, e.g. `🤖 Agent` styled component |
+| Confidence indicator | Colored text `⚠ 45% LOW` | Progress bar or gauge with color gradient (red → yellow → green) |
+| Sponsor line | `@claude  sponsor: @niladri` text | Avatar + name chips for assignee and sponsor |
+| Review context accordion | `V` key toggles, text-rendered | Collapsible panel/disclosure, click to expand |
+| Description accordion | `v` key toggles | Separate collapsible panel, independent of review context |
+| Downstream impact | `⚡ unblocks 3 tasks` text | Clickable links to blocked items, tooltip preview on hover |
+| Diffs tab | Syntax-colored text in detail view | Code diff viewer component (e.g. react-diff-viewer) with syntax highlighting |
+| Review queue | Virtual column with amber border | Visually distinct panel/column with amber accent, "Review Queue" header, sort indicator |
+| Mark as reviewed | `R` key → color change | Button: "Mark Reviewed" → card styling change (green tint/checkmark) |
+| Hide from view | `x` key → remove from column | Button: "Hide" or swipe-to-dismiss → card animates out |
+| Past reviews | `P` key → full-screen tree view | Sidebar or modal with collapsible tree, click any node to open detail |
+| Reproduce commands | Text in review context accordion | Copy-to-clipboard buttons next to each command |
+
+### Web-specific adaptations
+
+**Review queue visual treatment:**
+- Rendered as a distinct panel rather than a board column, separated by a vertical divider or visual break
+- Header: `⚡ Review Queue` with sort dropdown (default: confidence ascending)
+- Empty state: panel collapses or shows "No items awaiting review" message
+- Badge count in the board navigation/header: `Review Queue (3)` visible at all times even when panel is collapsed
+
+**Card interactions:**
+- Hover states: cards in the review queue show a preview tooltip with confidence, purpose, and downstream impact
+- Click to expand: opens review context inline or in a side panel (not a full page navigation)
+- "Mark Reviewed" and "Hide" are explicit buttons on the card, not hidden behind keyboard shortcuts
+- Reviewed cards show a green checkmark overlay and dimmed styling
+
+**Diffs tab:**
+- Use a proper code diff viewer component with:
+  - Syntax highlighting per language (detected from file extension)
+  - Side-by-side or unified view toggle
+  - Line numbers
+  - Expand/collapse unchanged context lines
+  - Copy button per file diff
+- File list sidebar for multi-file diffs — click a filename to jump to that diff
+
+**Past reviews:**
+- Collapsible tree view in a sidebar or modal
+- Each node shows: title, confidence badge, review date, reviewer name
+- Click to open full detail view as a slide-over panel
+- Search/filter within past reviews
+
+**Reproduce commands:**
+- Each command rendered in a code block with a one-click copy button
+- Optional: "Run in terminal" link that copies to clipboard with a shell-ready format
+
+**Confidence gauge:**
+- Rendered as a small circular or bar gauge on the card
+- Color transitions smoothly: red (0-50) → yellow (51-75) → green (76-100)
+- Tooltip on hover shows the proof items summary
+
+### Shared API endpoints
+
+The web UI communicates with the same board data via the cloud API. New endpoints needed:
+
+| Endpoint | Method | Purpose |
+|---|---|---|
+| `POST /boards/:id/items/:ref/complete` | POST | Complete item with review context (maps to `CompleteItemWithContext`) |
+| `POST /boards/:id/items/:ref/review` | POST | Mark item reviewed/hidden (maps to `ReviewItem`) |
+| `GET /boards/:id/review-queue` | GET | Returns items for the review queue (filtered, sorted by confidence) |
+| `GET /boards/:id/past-reviews` | GET | Returns reviewed/hidden items with tree structure |
+
+These endpoints wrap the same engine operations the CLI/TUI use. The engine is the single source of truth — the web UI does not implement its own business logic.
+
 ## Out of Scope
 
 - Push notifications / batch review alerts (deferred to notification phase)
 - Historical confidence accuracy tracking (future enhancement)
-- Web UI implementation details (follows same spec, separate implementation ticket)
 - Agent-to-agent review (only human review is in scope)
