@@ -96,13 +96,14 @@ func (a App) buildHierarchyTitleLines(item *domain.Item, contentW int) []string 
 	}
 
 	badgeWidth := lipgloss.Width(badge)
-	titleMax := contentW - utf8.RuneCountInString(prefix) - badgeWidth
+	prefixWidth := lipgloss.Width(prefix)
+	titleMax := contentW - prefixWidth - badgeWidth
 	if titleMax < 4 {
 		titleMax = 4
 	}
 	titleLines := wrapText(item.Title, titleMax)
 	lines := []string{prefix + titleLines[0] + badge}
-	indent := strings.Repeat(" ", utf8.RuneCountInString(prefix))
+	indent := strings.Repeat(" ", prefixWidth)
 	for _, tl := range titleLines[1:] {
 		lines = append(lines, indent+tl)
 	}
