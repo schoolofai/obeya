@@ -291,6 +291,106 @@ func TestGolden_PastReviewsTree(t *testing.T) {
 	teatest.RequireEqualOutput(t, []byte(screen))
 }
 
+// testHierarchyGoldenBoard creates a board with epic → story → task hierarchy for golden tests.
+func testHierarchyGoldenBoard(t *testing.T) (string, *engine.Engine) {
+	t.Helper()
+	dir := t.TempDir()
+	obeyaDir := filepath.Join(dir, ".obeya")
+	os.MkdirAll(obeyaDir, 0755)
+
+	board := map[string]interface{}{
+		"version":      1,
+		"name":         "hierarchy-board",
+		"next_display": 8,
+		"columns": []map[string]string{
+			{"name": "backlog"},
+			{"name": "in-progress"},
+			{"name": "done"},
+		},
+		"items": map[string]interface{}{
+			"epic-1": map[string]interface{}{
+				"id": "epic-1", "display_num": 1,
+				"title": "Auth Rewrite", "type": "epic",
+				"status": "backlog", "priority": "high",
+			},
+			"story-2": map[string]interface{}{
+				"id": "story-2", "display_num": 2,
+				"title": "Session Mgmt", "type": "story",
+				"status": "backlog", "priority": "medium",
+				"parent_id": "epic-1",
+			},
+			"task-3": map[string]interface{}{
+				"id": "task-3", "display_num": 3,
+				"title": "Refactor middleware", "type": "task",
+				"status": "backlog", "priority": "medium",
+				"parent_id": "story-2",
+			},
+			"task-4": map[string]interface{}{
+				"id": "task-4", "display_num": 4,
+				"title": "JWT validation", "type": "task",
+				"status": "in-progress", "priority": "high",
+				"parent_id": "story-2",
+			},
+			"task-5": map[string]interface{}{
+				"id": "task-5", "display_num": 5,
+				"title": "Update session store", "type": "task",
+				"status": "done", "priority": "low",
+				"parent_id": "story-2",
+			},
+			"task-6": map[string]interface{}{
+				"id": "task-6", "display_num": 6,
+				"title": "Fix README typo", "type": "task",
+				"status": "backlog", "priority": "low",
+			},
+		},
+		"display_map": map[string]string{
+			"1": "epic-1", "2": "story-2", "3": "task-3",
+			"4": "task-4", "5": "task-5", "6": "task-6",
+		},
+		"users":    map[string]interface{}{},
+		"plans":    map[string]interface{}{},
+		"projects": map[string]interface{}{},
+	}
+
+	data, _ := json.MarshalIndent(board, "", "  ")
+	boardFile := filepath.Join(obeyaDir, "board.json")
+	os.WriteFile(boardFile, data, 0644)
+
+	s := store.NewJSONStore(dir)
+	eng := engine.New(s)
+	return boardFile, eng
+}
+
+// TestGolden_UnifiedHierarchyExpanded captures hierarchy board with all items expanded.
+func TestGolden_UnifiedHierarchyExpanded(t *testing.T) {
+	boardFile, eng := testHierarchyGoldenBoard(t)
+	tm := startAndWait(t, eng, boardFile, 120, 40)
+	screen := getScreen(t, tm)
+	teatest.RequireEqualOutput(t, []byte(screen))
+}
+
+// TestGolden_UnifiedHierarchyCollapsed captures hierarchy board with epic collapsed in backlog.
+func TestGolden_UnifiedHierarchyCollapsed(t *testing.T) {
+	boardFile, eng := testHierarchyGoldenBoard(t)
+	tm := startAndWait(t, eng, boardFile, 120, 40)
+	// Press Space to collapse the epic (#1 is first selected item)
+	tm.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(" ")})
+	time.Sleep(50 * time.Millisecond)
+	screen := getScreen(t, tm)
+	teatest.RequireEqualOutput(t, []byte(screen))
+}
+
+// TestGolden_UnifiedHierarchyCrossColumn captures hierarchy with tasks in different columns showing breadcrumbs.
+func TestGolden_UnifiedHierarchyCrossColumn(t *testing.T) {
+	boardFile, eng := testHierarchyGoldenBoard(t)
+	tm := startAndWait(t, eng, boardFile, 120, 40)
+	// Move to in-progress column to see cross-column task with breadcrumb
+	tm.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("l")})
+	time.Sleep(50 * time.Millisecond)
+	screen := getScreen(t, tm)
+	teatest.RequireEqualOutput(t, []byte(screen))
+}
+
 // TestGolden_AgentCardExpanded captures an agent card with review context expanded.
 func TestGolden_AgentCardExpanded(t *testing.T) {
 	boardFile, eng := testReviewBoard(t)
