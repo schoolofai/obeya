@@ -66,6 +66,20 @@ func TestResolveSponsor_Explicit(t *testing.T) {
 	}
 }
 
+func TestResolveSponsor_ExplicitByName(t *testing.T) {
+	b := boardWithUsers([]string{"alice", "bob"}, []string{"claude"})
+	agentID := findUserID(b, "claude")
+	bobID := findUserID(b, "bob")
+	// Pass name "bob" instead of hex ID — this is the CLI path (--sponsor bob)
+	got, err := resolveSponsor(b, agentID, "bob", "")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got != bobID {
+		t.Errorf("sponsor = %q, want %q (bob resolved by name)", got, bobID)
+	}
+}
+
 func TestResolveSponsor_CopiedFromParent(t *testing.T) {
 	b := boardWithUsers([]string{"alice", "bob"}, []string{"claude"})
 	aliceID := findUserID(b, "alice")
