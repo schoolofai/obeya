@@ -10,6 +10,7 @@ const (
 	stateConfirm
 	stateDashboard
 	stateDAG
+	statePastReviews
 )
 
 type pickerKind int
@@ -28,4 +29,5 @@ const (
 	tabFields detailTab = iota
 	tabPlan
 	tabHistory
+	tabDiffs
 )

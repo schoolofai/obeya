@@ -7,6 +7,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/niladribose/obeya/internal/domain"
+	"github.com/niladribose/obeya/internal/engine"
 )
 
 func (a App) renderCard(item *domain.Item, selected bool) string {
@@ -16,30 +17,69 @@ func (a App) renderCard(item *domain.Item, selected bool) string {
 		contentW = 10
 	}
 
-	// Title: wrap instead of truncate
+	lines := a.buildCardLines(item, selected, contentW)
+
+	// Pre-pad all lines to contentW to avoid lipgloss Width() blank-line bug.
+	for i, line := range lines {
+		lines[i] = padToWidth(line, contentW)
+	}
+
+	content := strings.Join(lines, "\n")
+	return a.applyCardStyle(item, selected, content)
+}
+
+func (a App) buildCardLines(item *domain.Item, selected bool, contentW int) []string {
+	lines := a.buildTitleLines(item, contentW)
+	lines = append(lines, a.buildTypePriorityLine(item)...)
+	lines = a.appendParentBadge(lines, item)
+	lines = a.appendMetaLine(lines, item)
+	lines = a.appendDescAccordion(lines, item, selected, contentW)
+	lines = a.appendReviewAccordion(lines, item, selected, contentW)
+	return lines
+}
+
+func (a App) buildTitleLines(item *domain.Item, contentW int) []string {
 	prefix := fmt.Sprintf("#%d ", item.DisplayNum)
+
+	// Agent badge
+	if u, ok := a.board.Users[item.Assignee]; ok && u.Type == domain.IdentityAgent {
+		prefix = agentBadgeStyle.Render("AGENT") + " " + prefix
+	}
+
 	titleMax := contentW - utf8.RuneCountInString(prefix)
 	if titleMax < 4 {
 		titleMax = 4
 	}
 	titleLines := wrapText(item.Title, titleMax)
-	line1 := prefix + titleLines[0]
-
-	lines := []string{line1}
+	lines := []string{prefix + titleLines[0]}
 	indent := strings.Repeat(" ", utf8.RuneCountInString(prefix))
 	for _, tl := range titleLines[1:] {
 		lines = append(lines, indent+tl)
 	}
+	return lines
+}
 
+func (a App) buildTypePriorityLine(item *domain.Item) []string {
 	typLabel := typeStyle(string(item.Type)).Render(string(item.Type))
-	line2 := fmt.Sprintf("%s %s", typLabel, priorityIndicator(string(item.Priority)))
-	lines = append(lines, line2)
+	line := fmt.Sprintf("%s %s", typLabel, priorityIndicator(string(item.Priority)))
 
+	confStr := confidenceIndicator(item.Confidence)
+	if confStr != "" {
+		line = fmt.Sprintf("%s %s  %s", typLabel, priorityIndicator(string(item.Priority)), confStr)
+	}
+
+	return []string{line}
+}
+
+func (a App) appendParentBadge(lines []string, item *domain.Item) []string {
 	badge := a.parentBadge(item)
 	if badge != "" {
 		lines = append(lines, badge)
 	}
+	return lines
+}
 
+func (a App) appendMetaLine(lines []string, item *domain.Item) []string {
 	var metaParts []string
 	if item.Assignee != "" {
 		name := resolveUserName(a.board, item.Assignee)
@@ -50,29 +90,59 @@ func (a App) renderCard(item *domain.Item, selected bool) string {
 	if len(item.BlockedBy) > 0 {
 		metaParts = append(metaParts, blockedStyle.Render("[!]"))
 	}
+	if item.Sponsor != "" {
+		sponsorName := resolveUserName(a.board, item.Sponsor)
+		metaParts = append(metaParts, sponsorStyle.Render("sponsor: @"+sponsorName))
+	}
 	lines = append(lines, strings.Join(metaParts, " "))
 
-	// Accordion indicator — only on selected card with non-empty description
-	if selected && item.Description != "" {
-		if a.descExpanded == item.ID {
-			lines = append(lines, descIndicatorStyle.Render("\u25bc description"))
-			sep := strings.Repeat("\u2500", contentW)
-			lines = append(lines, lipgloss.NewStyle().Faint(true).Render(sep))
-			lines = append(lines, a.renderDescription(item.Description, contentW, a.descScrollY, 5)...)
-		} else {
-			lines = append(lines, descIndicatorStyle.Render("\u25b6 description"))
-		}
+	// Downstream impact
+	downstream := engine.ResolveDownstream(item.ID, a.board)
+	if len(downstream) > 0 {
+		lines = append(lines, downstreamStyle.Render(
+			fmt.Sprintf("\u26a1 unblocks %d tasks", len(downstream)),
+		))
 	}
 
-	// Pre-pad all lines to contentW to avoid lipgloss Width() blank-line bug.
-	// lipgloss Width() on multi-line ANSI content inserts spurious blank lines.
-	for i, line := range lines {
-		lines[i] = padToWidth(line, contentW)
-	}
+	return lines
+}
 
-	content := strings.Join(lines, "\n")
+func (a App) appendDescAccordion(lines []string, item *domain.Item, selected bool, contentW int) []string {
+	if !selected || item.Description == "" {
+		return lines
+	}
+	if a.descExpanded == item.ID {
+		lines = append(lines, descIndicatorStyle.Render("\u25bc description"))
+		sep := strings.Repeat("\u2500", contentW)
+		lines = append(lines, lipgloss.NewStyle().Faint(true).Render(sep))
+		lines = append(lines, a.renderDescription(item.Description, contentW, a.descScrollY, 5)...)
+	} else {
+		lines = append(lines, descIndicatorStyle.Render("\u25b6 description"))
+	}
+	return lines
+}
+
+func (a App) appendReviewAccordion(lines []string, item *domain.Item, selected bool, contentW int) []string {
+	if !selected || item.ReviewContext == nil {
+		return lines
+	}
+	if a.reviewExpanded == item.ID {
+		lines = append(lines, reviewContextIndicatorStyle.Render("\u25bc review context"))
+		sep := strings.Repeat("\u2504", contentW)
+		lines = append(lines, lipgloss.NewStyle().Faint(true).Render(sep))
+		lines = append(lines, a.renderReviewContext(item.ReviewContext, contentW, a.reviewScrollY, 5)...)
+	} else {
+		lines = append(lines, reviewContextIndicatorStyle.Render("\u25b6 review context"))
+	}
+	return lines
+}
+
+func (a App) applyCardStyle(item *domain.Item, selected bool, content string) string {
 	if selected {
 		return selectedCardStyle.Render(content)
+	}
+	if item.HumanReview != nil && item.HumanReview.Status == "reviewed" {
+		return reviewedCardStyle.Render(content)
 	}
 	return cardStyle.Render(content)
 }

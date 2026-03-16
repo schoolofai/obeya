@@ -21,4 +21,4 @@
 │╰────────────────╯│ │                  │ │                  │ │                  │ │                  │ 
 │                  │ │                  │ │                  │ │                  │ │                  │ 
 ╰──────────────────╯ ╰──────────────────╯ ╰──────────────────╯ ╰──────────────────╯ ╰──────────────────╯ 
-  h/l:columns  j/k:items  v:desc  m:move  a:assign  c:create  d:delete  p:priority  Enter:detail  Space:collapse  /:search  G:dag  D:dash  r:reload  q:quit
+  h/l:columns  j/k:items  v:desc  V:review  m:move  a:assign  c:create  d:delete  p:priority  R:reviewed  x:hide  P:past-reviews  Enter:detail  G:dag  D:dash  q:quit

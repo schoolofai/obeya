@@ -1,6 +1,10 @@
 package tui
 
-import "github.com/charmbracelet/lipgloss"
+import (
+	"fmt"
+
+	"github.com/charmbracelet/lipgloss"
+)
 
 var (
 	// Card styles
@@ -74,6 +78,45 @@ var (
 	descIndicatorStyle = lipgloss.NewStyle().Faint(true)
 	descStyle          = lipgloss.NewStyle().Foreground(lipgloss.Color("242"))
 	descScrollHint     = lipgloss.NewStyle().Faint(true)
+
+	// Agent badge
+	agentBadgeStyle = lipgloss.NewStyle().
+		Foreground(lipgloss.Color("5")).
+		Bold(true)
+
+	// Confidence indicators
+	confLow    = lipgloss.NewStyle().Foreground(lipgloss.Color("1"))
+	confMedium = lipgloss.NewStyle().Foreground(lipgloss.Color("3"))
+	confHigh   = lipgloss.NewStyle().Foreground(lipgloss.Color("2"))
+
+	// Sponsor
+	sponsorStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("6")).Faint(true)
+
+	// Review queue column (amber instead of cyan)
+	reviewQueueColumnStyle = lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("3")).
+		Padding(0, 0).
+		MarginRight(1)
+
+	activeReviewQueueColumnStyle = lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("11")).
+		Padding(0, 0).
+		MarginRight(1)
+
+	// Reviewed card
+	reviewedCardStyle = lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("2")).
+		Faint(true).
+		Padding(0, 1)
+
+	// Review context accordion
+	reviewContextIndicatorStyle = lipgloss.NewStyle().Faint(true).Foreground(lipgloss.Color("3"))
+
+	// Downstream impact
+	downstreamStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("3"))
 )
 
 func priorityIndicator(pri string) string {
@@ -88,6 +131,21 @@ func priorityIndicator(pri string) string {
 		return priLow
 	default:
 		return priMedium
+	}
+}
+
+func confidenceIndicator(confidence *int) string {
+	if confidence == nil {
+		return ""
+	}
+	c := *confidence
+	switch {
+	case c <= 50:
+		return confLow.Render(fmt.Sprintf("%d%% \u26a0 LOW", c))
+	case c <= 75:
+		return confMedium.Render(fmt.Sprintf("%d%%", c))
+	default:
+		return confHigh.Render(fmt.Sprintf("%d%% \u2713", c))
 	}
 }
 

@@ -34,13 +34,22 @@ func (d *DetailModel) SetSize(w, h int) {
 	d.height = h
 }
 
+func (d *DetailModel) tabCount() int {
+	if d.item != nil && d.item.ReviewContext != nil && hasAnyDiff(d.item.ReviewContext) {
+		return 4
+	}
+	return 3
+}
+
 func (d *DetailModel) NextTab() {
-	d.activeTab = (d.activeTab + 1) % 3
+	count := detailTab(d.tabCount())
+	d.activeTab = (d.activeTab + 1) % count
 	d.scrollY = 0
 }
 
 func (d *DetailModel) PrevTab() {
-	d.activeTab = (d.activeTab + 2) % 3
+	count := detailTab(d.tabCount())
+	d.activeTab = (d.activeTab + count - 1) % count
 	d.scrollY = 0
 }
 
@@ -114,6 +123,12 @@ func (d DetailModel) renderTabBar(b *strings.Builder) {
 		{"Plan", tabPlan},
 		{"History", tabHistory},
 	}
+	if d.tabCount() == 4 {
+		tabs = append(tabs, struct {
+			label string
+			tab   detailTab
+		}{"Diffs", tabDiffs})
+	}
 
 	activeStyle := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("14")).
@@ -141,6 +156,8 @@ func (d DetailModel) renderTabContent() string {
 		return d.renderPlanTab()
 	case tabHistory:
 		return d.renderHistoryTab()
+	case tabDiffs:
+		return renderDiffsTab(d.item.ReviewContext, d.width)
 	}
 	return ""
 }

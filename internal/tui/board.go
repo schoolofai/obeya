@@ -9,6 +9,12 @@ import (
 	"github.com/niladribose/obeya/internal/domain"
 )
 
+const humanReviewColName = "human-review"
+
+func isHumanReviewColumn(columns []string, colIdx int) bool {
+	return colIdx >= 0 && colIdx < len(columns) && columns[colIdx] == humanReviewColName
+}
+
 func (a App) renderBoard() string {
 	var cols []string
 	w := a.columnWidth()
@@ -38,8 +44,8 @@ func (a App) renderBoard() string {
 	board := lipgloss.JoinHorizontal(lipgloss.Top, cols...)
 	header := fmt.Sprintf("  Obeya Board: %s", a.board.Name)
 	help := helpStyle.Render(
-		"  h/l:columns  j/k:items  v:desc  m:move  a:assign  c:create  d:delete  " +
-			"p:priority  Enter:detail  Space:collapse  /:search  G:dag  D:dash  r:reload  q:quit",
+		"  h/l:columns  j/k:items  v:desc  V:review  m:move  a:assign  c:create  d:delete  " +
+			"p:priority  R:reviewed  x:hide  P:past-reviews  Enter:detail  G:dag  D:dash  q:quit",
 	)
 	return header + "\n" + board + "\n" + help
 }
@@ -49,6 +55,11 @@ func (a App) visibleItemsInColumn(colIdx int) []*domain.Item {
 		return nil
 	}
 	colName := a.columns[colIdx]
+
+	// Virtual human-review column: show items awaiting review.
+	if colName == humanReviewColName {
+		return a.humanReviewItems()
+	}
 
 	// Collect all items in this column.
 	var colItems []*domain.Item
@@ -217,4 +228,49 @@ func resolveUserName(board *domain.Board, userID string) string {
 		return u.Name
 	}
 	return userID
+}
+
+// humanReviewItems returns items that need human review, sorted by confidence ascending.
+func (a App) humanReviewItems() []*domain.Item {
+	var items []*domain.Item
+	for _, item := range a.board.Items {
+		if item.Status != "done" || item.ReviewContext == nil {
+			continue
+		}
+		if item.HumanReview != nil && item.HumanReview.Status == "hidden" {
+			continue
+		}
+		items = append(items, item)
+	}
+	sort.Slice(items, func(i, j int) bool {
+		ci := confidenceValue(items[i].Confidence)
+		cj := confidenceValue(items[j].Confidence)
+		if ci != cj {
+			return ci < cj
+		}
+		return items[i].UpdatedAt.Before(items[j].UpdatedAt)
+	})
+	return items
+}
+
+func confidenceValue(c *int) int {
+	if c == nil {
+		return -1
+	}
+	return *c
+}
+
+// hasReviewableItems returns true if any items need human review.
+func (a App) hasReviewableItems() bool {
+	if a.board == nil {
+		return false
+	}
+	for _, item := range a.board.Items {
+		if item.Status == "done" && item.ReviewContext != nil {
+			if item.HumanReview == nil || item.HumanReview.Status != "hidden" {
+				return true
+			}
+		}
+	}
+	return false
 }

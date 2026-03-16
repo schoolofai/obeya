@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"os/user"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -47,17 +48,24 @@ type App struct {
 	width  int
 	height int
 
+	// Identity for review operations
+	userID    string
+	sessionID string
+
 	watcher boardWatcher
 	err     error
 }
 
 // NewApp creates a new enhanced TUI app backed by the given engine.
 func NewApp(eng *engine.Engine, boardPath string) App {
+	uid := resolveCurrentUser()
 	return App{
 		engine:    eng,
 		boardPath: boardPath,
 		collapsed: make(map[string]bool),
 		state:     stateBoard,
+		userID:    uid,
+		sessionID: domain.GenerateID(),
 	}
 }
 
@@ -124,6 +132,10 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case boardLoadedMsg:
 		a.board = msg.board
 		a.columns = extractColumns(msg.board)
+		// Append virtual human-review column if there are reviewable items.
+		if a.hasReviewableItems() {
+			a.columns = append(a.columns, humanReviewColName)
+		}
 		a.initColumnModels()
 		a.clampCursor()
 		if a.state == stateDashboard {
@@ -336,6 +348,11 @@ func (a *App) collapseDescription() {
 	a.descScrollY = 0
 }
 
+func (a *App) collapseReviewContext() {
+	a.reviewExpanded = ""
+	a.reviewScrollY = 0
+}
+
 // clampDescScroll ensures descScrollY doesn't exceed the maximum scroll offset
 // for the currently expanded description.
 func (a *App) clampDescScroll(maxLines int) {
@@ -370,6 +387,31 @@ func (a *App) clampDescScroll(maxLines int) {
 	}
 }
 
+// clampReviewScroll ensures reviewScrollY doesn't exceed the maximum scroll offset
+// for the currently expanded review context.
+func (a *App) clampReviewScroll(maxLines int) {
+	if a.reviewExpanded == "" {
+		return
+	}
+	item := a.selectedItem()
+	if item == nil || item.ReviewContext == nil {
+		return
+	}
+	w := a.columnWidth()
+	contentW := w - 4
+	if contentW < 10 {
+		contentW = 10
+	}
+	totalLines := len(reviewContextLines(item.ReviewContext, contentW))
+	maxScroll := totalLines - maxLines
+	if maxScroll < 0 {
+		maxScroll = 0
+	}
+	if a.reviewScrollY > maxScroll {
+		a.reviewScrollY = maxScroll
+	}
+}
+
 func (a App) handleBoardKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "q", "ctrl+c":
@@ -382,6 +424,7 @@ func (a App) handleBoardKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "h", "left":
 		if a.cursorCol > 0 {
 			a.collapseDescription()
+			a.collapseReviewContext()
 			if len(a.colModels) > 0 {
 				a.colModels[a.cursorCol].active = false
 			}
@@ -396,6 +439,7 @@ func (a App) handleBoardKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "l", "right":
 		if a.cursorCol < len(a.columns)-1 {
 			a.collapseDescription()
+			a.collapseReviewContext()
 			if len(a.colModels) > 0 {
 				a.colModels[a.cursorCol].active = false
 			}
@@ -409,6 +453,7 @@ func (a App) handleBoardKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	case "tab":
 		a.collapseDescription()
+		a.collapseReviewContext()
 		if len(a.columns) > 0 {
 			if len(a.colModels) > 0 {
 				a.colModels[a.cursorCol].active = false
@@ -423,6 +468,7 @@ func (a App) handleBoardKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	case "j", "down":
 		a.collapseDescription()
+		a.collapseReviewContext()
 		items := a.visibleItemsInColumn(a.cursorCol)
 		if a.cursorRow < len(items)-1 {
 			a.cursorRow++
@@ -430,6 +476,7 @@ func (a App) handleBoardKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	case "k", "up":
 		a.collapseDescription()
+		a.collapseReviewContext()
 		if a.cursorRow > 0 {
 			a.cursorRow--
 			a.scrollToSelected()
@@ -541,6 +588,27 @@ func (a App) handleBoardKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "ctrl+j":
 		if a.reviewExpanded != "" {
 			a.reviewScrollY++
+			a.clampReviewScroll(5)
+		}
+	case "R":
+		if isHumanReviewColumn(a.columns, a.cursorCol) {
+			sel := a.selectedItem()
+			if sel != nil {
+				_ = a.engine.ReviewItem(
+					fmt.Sprint(sel.DisplayNum), "reviewed", a.userID, a.sessionID,
+				)
+				return a, a.loadBoard()
+			}
+		}
+	case "x":
+		if isHumanReviewColumn(a.columns, a.cursorCol) {
+			sel := a.selectedItem()
+			if sel != nil {
+				_ = a.engine.ReviewItem(
+					fmt.Sprint(sel.DisplayNum), "hidden", a.userID, a.sessionID,
+				)
+				return a, a.loadBoard()
+			}
 		}
 	case "ctrl+k":
 		if a.reviewExpanded != "" && a.reviewScrollY > 0 {
@@ -820,6 +888,8 @@ func (a App) handlePastReviewsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			a.prevState = statePastReviews
 			a.state = stateDetail
 		}
+	case " ":
+		a.pastReviews.ToggleCollapse()
 	case "esc", "P":
 		a.state = stateBoard
 	case "q", "ctrl+c":
@@ -840,4 +910,12 @@ func epicPickerLabels(board *domain.Board) []string {
 
 func (a App) renderConfirm() string {
 	return a.confirmMsg + "\n\ny: confirm  n/esc: cancel"
+}
+
+func resolveCurrentUser() string {
+	u, err := user.Current()
+	if err != nil || u == nil {
+		return "unknown"
+	}
+	return u.Username
 }

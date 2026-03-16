@@ -57,16 +57,29 @@ func (c *ColumnModel) View(itemCount int) string {
 
 	inner := header + "\n" + body
 
-	style := columnStyle
-	if c.active {
-		style = activeColumnStyle
-	}
+	style := c.columnBorderStyle()
 	return style.Render(inner)
+}
+
+func (c *ColumnModel) columnBorderStyle() lipgloss.Style {
+	if c.Name == humanReviewColName {
+		if c.active {
+			return activeReviewQueueColumnStyle
+		}
+		return reviewQueueColumnStyle
+	}
+	if c.active {
+		return activeColumnStyle
+	}
+	return columnStyle
 }
 
 // renderColumnHeader builds the header line: column name + count, padded.
 func renderColumnHeader(name string, count, width int, active bool) string {
 	label := fmt.Sprintf("%s (%d)", strings.ToUpper(name), count)
+	if name == humanReviewColName {
+		label = fmt.Sprintf("\u26a1 REVIEW QUEUE (%d)", count)
+	}
 	if active {
 		return padToWidth(activeColHeader.Render(label), width)
 	}
