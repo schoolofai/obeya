@@ -15,7 +15,7 @@ func (a App) renderCard(item *domain.Item, selected bool) string {
 	barColor, hasBar := leftBarStyle(item.Type)
 	contentW := w - 4 // border(2) + padding(2)
 	if hasBar {
-		contentW-- // account for ┃ character
+		contentW -= 2 // account for "┃ " (bar + space)
 	}
 	if contentW < 10 {
 		contentW = 10
@@ -128,7 +128,7 @@ func (a App) buildTypePriorityLine(item *domain.Item) []string {
 }
 
 func prependLeftBar(content string, color lipgloss.Color) string {
-	bar := lipgloss.NewStyle().Foreground(color).Render("\u2503")
+	bar := lipgloss.NewStyle().Foreground(color).Render("┃") + " "
 	lines := strings.Split(content, "\n")
 	for i, line := range lines {
 		lines[i] = bar + line

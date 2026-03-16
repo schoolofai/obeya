@@ -6,21 +6,21 @@
 ││ task ●●        ││ ││    task in     ││ ││    the full    ││ ││    review      ││ ││ task ●         ││ │                   │ 
 ││ @unassigned    ││ ││    todo column ││ ││    end-to-end  ││ ││ task ●●        ││ ││ @unassigned    ││ │                   │ 
 │╰────────────────╯│ ││ task ●         ││ ││    integration ││ ││ @unassigned    ││ │╰────────────────╯│ │                   │ 
-│┏━━━━━━━━━━━━━━━━┓│ ││ @unassigned    ││ ││    test suite  ││ │╰────────────────╯│ │                  │ │                   │ 
-│┃ ┃#2 Add token  ┃│ │╰────────────────╯│ ││    for cloud   ││ │                  │ │                  │ │                   │ 
-│┃ ┃   refresh    ┃│ │                  │ ││    synchroniza ││ │                  │ │                  │ │                   │ 
-│┃ ┃   handling   ┃│ │                  │ ││    tion with   ││ │                  │ │                  │ │                   │ 
-│┃ ┃   for        ┃│ │                  │ ││    real-time   ││ │                  │ │                  │ │                   │ 
-│┃ ┃   expired    ┃│ │                  │ ││    WebSocket   ││ │                  │ │                  │ │                   │ 
-│┃ ┃   sessions   ┃│ │                  │ ││    events      ││ │                  │ │                  │ │                   │ 
-│┃ ┃   with       ┃│ │                  │ ││ task ●●●       ││ │                  │ │                  │ │                   │ 
-│┃ ┃   automatic  ┃│ │                  │ ││ @unassigned    ││ │                  │ │                  │ │                   │ 
-│┃ ┃   retry      ┃│ │                  │ │╰────────────────╯│ │                  │ │                  │ │                   │ 
-│┃ ┃   logic      ┃│ │                  │ │                  │ │                  │ │                  │ │                   │ 
-│┃ ┃story ●●      ┃│ │                  │ │                  │ │                  │ │                  │ │                   │ 
-│┃ ┃@unassigned   ┃│ │                  │ │                  │ │                  │ │                  │ │                   │ 
-│┃ ┃▶ description ┃│ │                  │ │                  │ │                  │ │                  │ │                   │ 
-│┗━━━━━━━━━━━━━━━━┛│ │                  │ │                  │ │                  │ │                  │ │                   │ 
+│┏━━━━━━━━━━━━━━━━━│ ││ @unassigned    ││ ││    test suite  ││ │╰────────────────╯│ │                  │ │                   │ 
+│┃ ┃ #2 Add token  │ │╰────────────────╯│ ││    for cloud   ││ │                  │ │                  │ │                   │ 
+│┃ ┃    refresh    │ │                  │ ││    synchroniza ││ │                  │ │                  │ │                   │ 
+│┃ ┃    handling   │ │                  │ ││    tion with   ││ │                  │ │                  │ │                   │ 
+│┃ ┃    for        │ │                  │ ││    real-time   ││ │                  │ │                  │ │                   │ 
+│┃ ┃    expired    │ │                  │ ││    WebSocket   ││ │                  │ │                  │ │                   │ 
+│┃ ┃    sessions   │ │                  │ ││    events      ││ │                  │ │                  │ │                   │ 
+│┃ ┃    with       │ │                  │ ││ task ●●●       ││ │                  │ │                  │ │                   │ 
+│┃ ┃    automatic  │ │                  │ ││ @unassigned    ││ │                  │ │                  │ │                   │ 
+│┃ ┃    retry      │ │                  │ │╰────────────────╯│ │                  │ │                  │ │                   │ 
+│┃ ┃    logic      │ │                  │ │                  │ │                  │ │                  │ │                   │ 
+│┃ ┃ story ●●      │ │                  │ │                  │ │                  │ │                  │ │                   │ 
+│┃ ┃ @unassigned   │ │                  │ │                  │ │                  │ │                  │ │                   │ 
+│┃ ┃ ▶ description │ │                  │ │                  │ │                  │ │                  │ │                   │ 
+│┗━━━━━━━━━━━━━━━━━│ │                  │ │                  │ │                  │ │                  │ │                   │ 
 │                  │ │                  │ │                  │ │                  │ │                  │ │                   │ 
 │                  │ │                  │ │                  │ │                  │ │                  │ │                   │ 
 │                  │ │                  │ │                  │ │                  │ │                  │ │                   │ 
