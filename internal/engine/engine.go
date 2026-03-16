@@ -64,6 +64,35 @@ func (e *Engine) CreateItem(itemType, title, parentRef, description, priority, a
 	return created, err
 }
 
+func (e *Engine) ReviewItem(ref string, status string, userID string, sessionID string) error {
+	if status != "reviewed" && status != "hidden" {
+		return fmt.Errorf("invalid review status %q: must be 'reviewed' or 'hidden'", status)
+	}
+
+	return e.store.Transaction(func(board *domain.Board) error {
+		id, err := board.ResolveID(ref)
+		if err != nil {
+			return err
+		}
+
+		actorType := resolveActorTypeFromBoard(board, userID)
+		if actorType == "agent" {
+			return fmt.Errorf("agents cannot review items — only humans can mark items as reviewed")
+		}
+
+		item := board.Items[id]
+		item.HumanReview = &domain.HumanReview{
+			Status:     status,
+			ReviewedBy: userID,
+			ReviewedAt: time.Now(),
+		}
+		item.UpdatedAt = time.Now()
+		appendHistory(item, userID, sessionID, "human-review", status)
+
+		return nil
+	})
+}
+
 func (e *Engine) MoveItem(ref, status, userID, sessionID string) error {
 	return e.store.Transaction(func(board *domain.Board) error {
 		id, err := board.ResolveID(ref)
