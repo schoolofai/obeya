@@ -30,6 +30,10 @@ var moveCmd = &cobra.Command{
 			return
 		}
 
+		if args[1] == "done" {
+			warnIfAgent(eng)
+		}
+
 		if err := eng.MoveItem(args[0], args[1], getUserID(), getSessionID()); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
@@ -68,6 +72,18 @@ func boardColumnNames(board *domain.Board) string {
 		names += c.Name
 	}
 	return names
+}
+
+// warnIfAgent emits a warning when an agent uses "ob move <ref> done"
+// instead of "ob done <ref>" which provides review context.
+func warnIfAgent(eng *engine.Engine) {
+	actorType, err := eng.ResolveActorType(getUserID())
+	if err != nil {
+		return // non-fatal: skip warning if resolution fails
+	}
+	if actorType == "agent" {
+		fmt.Fprintf(os.Stderr, "Warning: use 'ob done <ref>' to include review context for human review.\n")
+	}
 }
 
 func init() {

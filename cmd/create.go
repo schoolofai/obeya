@@ -17,6 +17,7 @@ var (
 	createTags     string
 	createDesc     string
 	createBodyFile string
+	createSponsor  string
 )
 
 var createCmd = &cobra.Command{
@@ -57,7 +58,7 @@ var createCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		item, err := eng.CreateItem(itemType, title, createParent, createDesc, createPriority, createAssign, tags, "")
+		item, err := eng.CreateItem(itemType, title, createParent, createDesc, createPriority, createAssign, tags, createSponsor)
 		if err != nil {
 			return err
 		}
@@ -88,6 +89,7 @@ func init() {
 	createCmd.Flags().StringVar(&createTags, "tag", "", "comma-separated tags")
 	createCmd.Flags().StringVarP(&createDesc, "description", "d", "", "item description")
 	createCmd.Flags().StringVar(&createBodyFile, "body-file", "", "read description from file")
+	createCmd.Flags().StringVar(&createSponsor, "sponsor", "", "human sponsor for agent-created items")
 	rootCmd.AddCommand(createCmd)
 }
 
