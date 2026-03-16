@@ -62,19 +62,6 @@ var (
 	// Help bar
 	helpStyle = lipgloss.NewStyle().Faint(true)
 
-	// Epic group header
-	epicGroupStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("5")).
-			Bold(true)
-
-	selectedEpicGroupStyle = lipgloss.NewStyle().
-				Foreground(lipgloss.Color("14")).
-				Bold(true).
-				Underline(true)
-
-	// Cross-column badge appended to epic headers when epic lives elsewhere.
-	crossColBadge = lipgloss.NewStyle().Faint(true).Render(" ⇠")
-
 	// Description accordion
 	descIndicatorStyle = lipgloss.NewStyle().Faint(true)
 	descStyle          = lipgloss.NewStyle().Foreground(lipgloss.Color("242"))
