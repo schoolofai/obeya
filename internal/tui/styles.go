@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/niladribose/obeya/internal/domain"
 )
 
 var (
@@ -117,6 +118,25 @@ var (
 
 	// Downstream impact
 	downstreamStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("3"))
+
+	// Hierarchy: left bar colors
+	epicBarColor  = lipgloss.Color("5")  // magenta
+	storyBarColor = lipgloss.Color("4")  // blue
+
+	// Breadcrumb
+	breadcrumbStyle = lipgloss.NewStyle().Faint(true)
+
+	// Child count badge
+	epicBadgeStyle = lipgloss.NewStyle().
+		Foreground(lipgloss.Color("5")).
+		Background(lipgloss.Color("53")) // dark magenta bg
+
+	storyBadgeStyle = lipgloss.NewStyle().
+		Foreground(lipgloss.Color("4")).
+		Background(lipgloss.Color("17")) // dark blue bg
+
+	// Progress fraction
+	progressStyle = lipgloss.NewStyle().Faint(true)
 )
 
 func priorityIndicator(pri string) string {
@@ -146,6 +166,17 @@ func confidenceIndicator(confidence *int) string {
 		return confMedium.Render(fmt.Sprintf("%d%%", c))
 	default:
 		return confHigh.Render(fmt.Sprintf("%d%% \u2713", c))
+	}
+}
+
+func leftBarStyle(itemType domain.ItemType) (lipgloss.Color, bool) {
+	switch itemType {
+	case domain.ItemTypeEpic:
+		return epicBarColor, true
+	case domain.ItemTypeStory:
+		return storyBarColor, true
+	default:
+		return "", false
 	}
 }
 
