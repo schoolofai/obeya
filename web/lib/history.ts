@@ -3,7 +3,7 @@ import { getDatabases } from "@/lib/appwrite/server";
 import { getEnv } from "@/lib/env";
 import { COLLECTIONS } from "@/lib/appwrite/collections";
 
-type HistoryAction = "created" | "moved" | "edited" | "assigned" | "blocked" | "unblocked";
+type HistoryAction = "created" | "moved" | "edited" | "assigned" | "blocked" | "unblocked" | "complete-with-context" | "human-review";
 
 interface HistoryParams {
   itemId: string;

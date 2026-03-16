@@ -15,6 +15,39 @@ export interface Column {
   limit: number;
 }
 
+export interface FileChange {
+  path: string;
+  added: number;
+  removed: number;
+  diff?: string;
+}
+
+export interface TestResult {
+  name: string;
+  passed: boolean;
+}
+
+export interface ProofItem {
+  check: string;
+  status: "pass" | "fail" | "warn";
+  detail?: string;
+}
+
+export interface ReviewContext {
+  purpose: string;
+  files_changed?: FileChange[];
+  tests_written?: TestResult[];
+  proof?: ProofItem[];
+  reasoning?: string;
+  reproduce?: string[];
+}
+
+export interface HumanReview {
+  status: "pending" | "reviewed" | "hidden";
+  reviewed_by?: string;
+  reviewed_at?: string;
+}
+
 export interface Item {
   id: string;
   board_id: string;
@@ -29,6 +62,10 @@ export interface Item {
   blocked_by: string[];
   tags: string[];
   project: string | null;
+  sponsor?: string;
+  confidence?: number | null;
+  review_context?: ReviewContext | null;
+  human_review?: HumanReview | null;
   created_at: string;
   updated_at: string;
 }

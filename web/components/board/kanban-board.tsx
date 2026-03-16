@@ -4,6 +4,7 @@ import { useState, useCallback } from "react";
 import { DragDropContext, type DropResult } from "@hello-pangea/dnd";
 import { KanbanColumn } from "./kanban-column";
 import { ItemDetailPanel } from "./item-detail-panel";
+import { ReviewQueuePanel } from "./review-queue-panel";
 import type { BoardItem, BoardColumn, Board } from "@/lib/api-client";
 
 interface KanbanBoardProps {
@@ -83,6 +84,46 @@ export function KanbanBoard({ board, items: initialItems }: KanbanBoardProps) {
     setSelectedItem(updated);
   }, []);
 
+  const handleMarkReviewed = useCallback(
+    async (item: BoardItem) => {
+      const response = await fetch(
+        `/api/boards/${board.$id}/items/${item.display_num}/review`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: "reviewed" }),
+        }
+      );
+      if (!response.ok) return;
+      const body = await response.json();
+      if (body.ok) {
+        const updated: BoardItem = { ...item, human_review: body.data.human_review };
+        handleItemUpdate(updated);
+      }
+    },
+    [board.$id, handleItemUpdate]
+  );
+
+  const handleHide = useCallback(
+    async (item: BoardItem) => {
+      const response = await fetch(
+        `/api/boards/${board.$id}/items/${item.display_num}/review`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: "hidden" }),
+        }
+      );
+      if (!response.ok) return;
+      const body = await response.json();
+      if (body.ok) {
+        const updated: BoardItem = { ...item, human_review: body.data.human_review };
+        handleItemUpdate(updated);
+      }
+    },
+    [board.$id, handleItemUpdate]
+  );
+
   return (
     <div className="h-full flex flex-col">
       <div className="flex-1 overflow-x-auto">
@@ -96,6 +137,12 @@ export function KanbanBoard({ board, items: initialItems }: KanbanBoardProps) {
                 onCardClick={handleCardClick}
               />
             ))}
+            <ReviewQueuePanel
+              items={items}
+              onCardClick={handleCardClick}
+              onMarkReviewed={handleMarkReviewed}
+              onHide={handleHide}
+            />
           </div>
         </DragDropContext>
       </div>

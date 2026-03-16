@@ -1,4 +1,5 @@
-import type { ApiResult } from "./types";
+import type { ApiResult, FileChange, TestResult, ProofItem, ReviewContext, HumanReview } from "./types";
+export type { FileChange, TestResult, ProofItem, ReviewContext, HumanReview };
 
 // Appwrite document types for server-side data
 export interface Board {
@@ -31,6 +32,10 @@ export interface BoardItem {
   blocked_by: string[];
   tags: string[];
   project: string | null;
+  sponsor?: string;
+  confidence?: number | null;
+  review_context?: ReviewContext | null;
+  human_review?: HumanReview | null;
   created_at: string;
   updated_at: string;
 }

@@ -2,6 +2,10 @@
 
 import { useEffect, useState, useCallback } from "react";
 import type { BoardItem, HistoryEntry } from "@/lib/api-client";
+import { ReviewContextPanel } from "./review-context-panel";
+import { DiffsViewer } from "./diffs-viewer";
+import { AgentBadge } from "./agent-badge";
+import { ConfidenceGauge } from "./confidence-gauge";
 
 interface ItemDetailPanelProps {
   item: BoardItem;
@@ -9,6 +13,8 @@ interface ItemDetailPanelProps {
   onClose: () => void;
   onUpdate: (updated: BoardItem) => void;
 }
+
+type DetailTab = "fields" | "history" | "diffs";
 
 const PRIORITY_COLORS: Record<string, string> = {
   critical: "bg-red-100 text-red-700",
@@ -66,6 +72,25 @@ function HistoryList({ history }: { history: HistoryEntry[] }) {
   );
 }
 
+function TabButton({ label, active, onClick }: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`px-3 py-1.5 text-xs font-medium rounded-t transition-colors
+        ${active
+          ? "bg-white text-gray-900 border-b-2 border-indigo-500"
+          : "text-gray-500 hover:text-gray-700"
+        }`}
+    >
+      {label}
+    </button>
+  );
+}
+
 export function ItemDetailPanel({
   item,
   boardId,
@@ -73,6 +98,9 @@ export function ItemDetailPanel({
   onUpdate,
 }: ItemDetailPanelProps) {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [activeTab, setActiveTab] = useState<DetailTab>("fields");
+
+  const hasDiffs = item.review_context?.files_changed?.some((f) => f.diff);
 
   const loadDetails = useCallback(async () => {
     const res = await fetch(`/api/items/${item.$id}/history`);
@@ -89,6 +117,7 @@ export function ItemDetailPanel({
     <div className="fixed inset-y-0 right-0 w-96 bg-white border-l border-gray-200 shadow-xl flex flex-col z-50">
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
         <div className="flex items-center gap-2">
+          {item.review_context && <AgentBadge />}
           <span className="text-xs font-mono text-gray-500">
             #{item.display_num}
           </span>
@@ -97,28 +126,65 @@ export function ItemDetailPanel({
           >
             {item.priority}
           </span>
+          {item.confidence !== null && item.confidence !== undefined && (
+            <ConfidenceGauge confidence={item.confidence} />
+          )}
         </div>
         <button
           aria-label="Close panel"
           onClick={onClose}
           className="text-gray-400 hover:text-gray-600 transition-colors"
         >
-          ✕
+          &#x2715;
         </button>
       </div>
-      <div className="flex-1 overflow-y-auto p-4">
-        <h2 className="text-base font-semibold text-gray-900 mb-2">
-          {item.title}
-        </h2>
-        {item.description && (
-          <p className="text-sm text-gray-600 leading-relaxed">
-            {item.description}
-          </p>
+
+      <div className="flex gap-1 px-4 pt-2 border-b border-gray-200">
+        <TabButton label="Fields" active={activeTab === "fields"} onClick={() => setActiveTab("fields")} />
+        <TabButton label="History" active={activeTab === "history"} onClick={() => setActiveTab("history")} />
+        {hasDiffs && (
+          <TabButton label="Diffs" active={activeTab === "diffs"} onClick={() => setActiveTab("diffs")} />
         )}
-        <TagList tags={item.tags} />
-        <BlockedSection blockedBy={item.blocked_by} />
-        <HistoryList history={history} />
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-4">
+        {activeTab === "fields" && (
+          <FieldsTab item={item} />
+        )}
+        {activeTab === "history" && (
+          <HistoryList history={history} />
+        )}
+        {activeTab === "diffs" && item.review_context?.files_changed && (
+          <DiffsViewer files={item.review_context.files_changed} />
+        )}
       </div>
     </div>
+  );
+}
+
+function FieldsTab({ item }: { item: BoardItem }) {
+  return (
+    <>
+      <h2 className="text-base font-semibold text-gray-900 mb-2">
+        {item.title}
+      </h2>
+      {item.description && (
+        <p className="text-sm text-gray-600 leading-relaxed">
+          {item.description}
+        </p>
+      )}
+      {item.sponsor && (
+        <p className="text-xs text-gray-500 mt-2">
+          Sponsor: @{item.sponsor}
+        </p>
+      )}
+      <TagList tags={item.tags} />
+      <BlockedSection blockedBy={item.blocked_by} />
+      {item.review_context && (
+        <div className="mt-4">
+          <ReviewContextPanel context={item.review_context} />
+        </div>
+      )}
+    </>
   );
 }
