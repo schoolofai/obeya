@@ -132,10 +132,8 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case boardLoadedMsg:
 		a.board = msg.board
 		a.columns = extractColumns(msg.board)
-		// Append virtual human-review column if there are reviewable items.
-		if a.hasReviewableItems() {
-			a.columns = append(a.columns, humanReviewColName)
-		}
+		// Always show human-review column — signals humans are part of the process.
+		a.columns = append(a.columns, humanReviewColName)
 		a.initColumnModels()
 		a.clampCursor()
 		if a.state == stateDashboard {
