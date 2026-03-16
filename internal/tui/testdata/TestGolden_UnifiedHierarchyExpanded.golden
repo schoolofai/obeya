@@ -2,15 +2,15 @@
 ╭───────────────────────────╮ ╭───────────────────────────╮ ╭───────────────────────────╮ ╭───────────────────────────╮ 
 │BACKLOG (4)                │ │IN-PROGRESS (1)            │ │DONE (1)                   │ │⚡ REVIEW QUEUE (0)        │ 
 │┏━━━━━━━━━━━━━━━━━━━━━━━━━┓│ │╭─────────────────────────╮│ │╭─────────────────────────╮│ │                           │ 
-│┃ ┃ ▼ #1 Auth 4 items     ┃│ ││ … › Session Mgmt        ││ ││ … › Session Mgmt        ││ │                           │ 
-│┃ ┃      Rewrite          ┃│ ││ #4 JWT validation       ││ ││ #5 Update session store ││ │                           │ 
+│┃ ┃ ▼ #1 Auth Rewrite     ┃│ ││ … › Session Mgmt        ││ ││ … › Session Mgmt        ││ │                           │ 
+│┃ ┃ 4 items               ┃│ ││ #4 JWT validation       ││ ││ #5 Update session store ││ │                           │ 
 │┃ ┃ epic ●●  1/4 done     ┃│ ││ task ●●                 ││ ││ task ●                  ││ │                           │ 
 │┃ ┃ @unassigned           ┃│ ││ @unassigned             ││ ││ @unassigned             ││ │                           │ 
 │┗━━━━━━━━━━━━━━━━━━━━━━━━━┛│ │╰─────────────────────────╯│ │╰─────────────────────────╯│ │                           │ 
 │╭─────────────────────────╮│ │                           │ │                           │ │                           │ 
 ││ ┃ Auth Rewrite          ││ │                           │ │                           │ │                           │ 
-││ ┃ ▼ #2 Session 3 items  ││ │                           │ │                           │ │                           │ 
-││ ┃      Mgmt             ││ │                           │ │                           │ │                           │ 
+││ ┃ ▼ #2 Session Mgmt     ││ │                           │ │                           │ │                           │ 
+││ ┃ 3 items               ││ │                           │ │                           │ │                           │ 
 ││ ┃ story ●●  1/3 done    ││ │                           │ │                           │ │                           │ 
 ││ ┃ @unassigned           ││ │                           │ │                           │ │                           │ 
 │╰─────────────────────────╯│ │                           │ │                           │ │                           │ 

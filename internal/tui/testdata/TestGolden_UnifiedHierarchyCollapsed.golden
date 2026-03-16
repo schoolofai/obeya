@@ -2,8 +2,8 @@
 ╭───────────────────────────╮ ╭───────────────────────────╮ ╭───────────────────────────╮ ╭───────────────────────────╮ 
 │BACKLOG (2)                │ │IN-PROGRESS (1)            │ │DONE (1)                   │ │⚡ REVIEW QUEUE (0)        │ 
 │┏━━━━━━━━━━━━━━━━━━━━━━━━━┓│ │╭─────────────────────────╮│ │╭─────────────────────────╮│ │                           │ 
-│┃ ┃ ▶ #1 Auth 4 items     ┃│ ││ … › Session Mgmt        ││ ││ … › Session Mgmt        ││ │                           │ 
-│┃ ┃      Rewrite          ┃│ ││ #4 JWT validation       ││ ││ #5 Update session store ││ │                           │ 
+│┃ ┃ ▶ #1 Auth Rewrite     ┃│ ││ … › Session Mgmt        ││ ││ … › Session Mgmt        ││ │                           │ 
+│┃ ┃ 4 items               ┃│ ││ #4 JWT validation       ││ ││ #5 Update session store ││ │                           │ 
 │┃ ┃ epic ●●  1/4 done     ┃│ ││ task ●●                 ││ ││ task ●                  ││ │                           │ 
 │┃ ┃ @unassigned           ┃│ ││ @unassigned             ││ ││ @unassigned             ││ │                           │ 
 │┗━━━━━━━━━━━━━━━━━━━━━━━━━┛│ │╰─────────────────────────╯│ │╰─────────────────────────╯│ │                           │ 

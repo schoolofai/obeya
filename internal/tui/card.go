@@ -66,11 +66,12 @@ func (a App) buildHierarchyTitleLines(item *domain.Item, contentW int) []string 
 	prefix := ""
 
 	// Collapse indicator for items with children
-	if hasChildItems(a.board, item.ID) {
+	hasKids := hasChildItems(a.board, item.ID)
+	if hasKids {
 		if a.collapsed[item.ID] {
-			prefix += "\u25b6 "
+			prefix += "▶ "
 		} else {
-			prefix += "\u25bc "
+			prefix += "▼ "
 		}
 	}
 
@@ -81,33 +82,41 @@ func (a App) buildHierarchyTitleLines(item *domain.Item, contentW int) []string 
 
 	prefix += fmt.Sprintf("#%d ", item.DisplayNum)
 
-	// Child count badge (rendered after title)
-	badge := ""
-	if count := childCount(a.board, item.ID); count > 0 {
-		badgeText := fmt.Sprintf("%d items", count)
-		switch item.Type {
-		case domain.ItemTypeEpic:
-			badge = " " + epicBadgeStyle.Render(badgeText)
-		case domain.ItemTypeStory:
-			badge = " " + storyBadgeStyle.Render(badgeText)
-		default:
-			badge = " " + progressStyle.Render(badgeText)
-		}
-	}
-
-	badgeWidth := lipgloss.Width(badge)
+	// Title gets full remaining width — badge goes on its own line
 	prefixWidth := lipgloss.Width(prefix)
-	titleMax := contentW - prefixWidth - badgeWidth
+	titleMax := contentW - prefixWidth
 	if titleMax < 4 {
 		titleMax = 4
 	}
 	titleLines := wrapText(item.Title, titleMax)
-	lines := []string{prefix + titleLines[0] + badge}
+	lines := []string{prefix + titleLines[0]}
 	indent := strings.Repeat(" ", prefixWidth)
 	for _, tl := range titleLines[1:] {
 		lines = append(lines, indent+tl)
 	}
+
+	// Child count badge on its own line (below title)
+	if hasKids {
+		lines = append(lines, a.renderChildBadge(item))
+	}
+
 	return lines
+}
+
+func (a App) renderChildBadge(item *domain.Item) string {
+	count := childCount(a.board, item.ID)
+	if count == 0 {
+		return ""
+	}
+	badgeText := fmt.Sprintf("%d items", count)
+	switch item.Type {
+	case domain.ItemTypeEpic:
+		return epicBadgeStyle.Render(badgeText)
+	case domain.ItemTypeStory:
+		return storyBadgeStyle.Render(badgeText)
+	default:
+		return progressStyle.Render(badgeText)
+	}
 }
 
 func (a App) buildTypePriorityLine(item *domain.Item) []string {
