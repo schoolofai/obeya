@@ -64,6 +64,31 @@ func (e *Engine) CreateItem(itemType, title, parentRef, description, priority, a
 	return created, err
 }
 
+func (e *Engine) CompleteItemWithContext(ref string, ctx domain.ReviewContext, confidence int, userID string, sessionID string) error {
+	return e.store.Transaction(func(board *domain.Board) error {
+		id, err := board.ResolveID(ref)
+		if err != nil {
+			return err
+		}
+
+		item := board.Items[id]
+		if err := CheckAssignee(item); err != nil {
+			return err
+		}
+
+		oldStatus := item.Status
+		item.Status = "done"
+		item.ReviewContext = &ctx
+		item.Confidence = &confidence
+		item.HumanReview = &domain.HumanReview{Status: "pending"}
+		item.UpdatedAt = time.Now()
+		appendHistory(item, userID, sessionID, "complete-with-context",
+			fmt.Sprintf("status: %s -> done, purpose: %s", oldStatus, ctx.Purpose))
+
+		return nil
+	})
+}
+
 func (e *Engine) ReviewItem(ref string, status string, userID string, sessionID string) error {
 	if status != "reviewed" && status != "hidden" {
 		return fmt.Errorf("invalid review status %q: must be 'reviewed' or 'hidden'", status)
