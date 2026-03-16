@@ -76,7 +76,7 @@ func TestCloudStore_EngineIntegration(t *testing.T) {
 	eng := engine.New(cs)
 
 	// Test: Create an item via Engine
-	item, err := eng.CreateItem("task", "Integration Task", "", "desc", "medium", "testuser", nil)
+	item, err := eng.CreateItem("task", "Integration Task", "", "desc", "medium", "testuser", nil, "")
 	if err != nil {
 		t.Fatalf("CreateItem via Engine failed: %v", err)
 	}

@@ -26,17 +26,22 @@ type App struct {
 	descExpanded string // item ID whose description is expanded, "" if none
 	descScrollY  int    // scroll offset within expanded description
 
+	// Review context accordion
+	reviewExpanded string // item ID whose review context is expanded
+	reviewScrollY  int
+
 	// State machine
 	state     viewState
 	prevState viewState
 
 	// Sub-components
-	detail     DetailModel
-	picker     PickerModel
-	input      InputModel
-	dashboard  DashboardModel
-	dag        DAGModel
-	confirmMsg string
+	detail      DetailModel
+	picker      PickerModel
+	input       InputModel
+	dashboard   DashboardModel
+	dag         DAGModel
+	pastReviews PastReviewsModel
+	confirmMsg  string
 
 	// Dimensions
 	width  int
@@ -177,6 +182,9 @@ func (a App) View() string {
 	case stateDAG:
 		a.dag.SetSize(a.width, a.height)
 		return a.dag.View()
+	case statePastReviews:
+		a.pastReviews.SetSize(a.width, a.height)
+		return a.pastReviews.View()
 	default:
 		return a.renderBoard()
 	}
@@ -197,6 +205,8 @@ func (a App) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return a.handleConfirmKey(msg)
 	case stateDashboard:
 		return a.handleDashboardKey(msg)
+	case statePastReviews:
+		return a.handlePastReviewsKey(msg)
 	case stateDAG:
 		return a.handleDAGKey(msg)
 	}
@@ -517,6 +527,30 @@ func (a App) handleBoardKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		a.prevState = stateBoard
 		a.state = stateDAG
 		return a, dagTickCmd()
+	case "V":
+		sel := a.selectedItem()
+		if sel != nil && sel.ReviewContext != nil {
+			if a.reviewExpanded == sel.ID {
+				a.reviewExpanded = ""
+				a.reviewScrollY = 0
+			} else {
+				a.reviewExpanded = sel.ID
+				a.reviewScrollY = 0
+			}
+		}
+	case "ctrl+j":
+		if a.reviewExpanded != "" {
+			a.reviewScrollY++
+		}
+	case "ctrl+k":
+		if a.reviewExpanded != "" && a.reviewScrollY > 0 {
+			a.reviewScrollY--
+		}
+	case "P":
+		a.pastReviews = newPastReviewsModel(a.board)
+		a.pastReviews.SetSize(a.width, a.height)
+		a.state = statePastReviews
+		return a, nil
 	case "r":
 		a.err = nil
 		return a, a.loadBoard()
@@ -674,7 +708,7 @@ func (a App) executeInput(value string) (tea.Model, tea.Cmd) {
 				parentRef = item.ID
 			}
 		}
-		if _, err := a.engine.CreateItem(ctx, value, parentRef, "", "medium", assignee, nil); err != nil {
+		if _, err := a.engine.CreateItem(ctx, value, parentRef, "", "medium", assignee, nil, ""); err != nil {
 			a.err = fmt.Errorf("create failed: %w", err)
 			a.state = stateBoard
 			return a, nil
@@ -768,6 +802,28 @@ func (a App) handleDAGKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	case "r":
 		return a, a.loadBoard()
+	}
+	return a, nil
+}
+
+func (a App) handlePastReviewsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "j", "down":
+		a.pastReviews.CursorDown()
+	case "k", "up":
+		a.pastReviews.CursorUp()
+	case "enter":
+		sel := a.pastReviews.SelectedItem()
+		if sel != nil {
+			a.detail = newDetailModel(sel, a.board)
+			a.detail.SetSize(a.width, a.height)
+			a.prevState = statePastReviews
+			a.state = stateDetail
+		}
+	case "esc", "P":
+		a.state = stateBoard
+	case "q", "ctrl+c":
+		return a.quit()
 	}
 	return a, nil
 }

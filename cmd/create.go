@@ -57,7 +57,7 @@ var createCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		item, err := eng.CreateItem(itemType, title, createParent, createDesc, createPriority, createAssign, tags)
+		item, err := eng.CreateItem(itemType, title, createParent, createDesc, createPriority, createAssign, tags, "")
 		if err != nil {
 			return err
 		}

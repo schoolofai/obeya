@@ -58,7 +58,7 @@ func TestIntegration_FullFlow(t *testing.T) {
 	}
 
 	// --- Create hierarchy: epic -> story -> task (with tags) ---
-	epic, err := eng.CreateItem("epic", "Platform Build", "", "Build the platform", "high", "alice", nil)
+	epic, err := eng.CreateItem("epic", "Platform Build", "", "Build the platform", "high", "alice", nil, "")
 	if err != nil {
 		t.Fatalf("CreateItem (epic) failed: %v", err)
 	}
@@ -66,7 +66,7 @@ func TestIntegration_FullFlow(t *testing.T) {
 		t.Errorf("expected epic display num 1, got %d", epic.DisplayNum)
 	}
 
-	story, err := eng.CreateItem("story", "Auth Module", fmt.Sprintf("%d", epic.DisplayNum), "Implement auth", "medium", "alice", []string{"auth", "backend"})
+	story, err := eng.CreateItem("story", "Auth Module", fmt.Sprintf("%d", epic.DisplayNum), "Implement auth", "medium", "alice", []string{"auth", "backend"}, "")
 	if err != nil {
 		t.Fatalf("CreateItem (story) failed: %v", err)
 	}
@@ -77,7 +77,7 @@ func TestIntegration_FullFlow(t *testing.T) {
 		t.Errorf("expected story parent to be epic ID")
 	}
 
-	task1, err := eng.CreateItem("task", "Login endpoint", fmt.Sprintf("%d", story.DisplayNum), "", "high", "alice", []string{"auth", "api"})
+	task1, err := eng.CreateItem("task", "Login endpoint", fmt.Sprintf("%d", story.DisplayNum), "", "high", "alice", []string{"auth", "api"}, "")
 	if err != nil {
 		t.Fatalf("CreateItem (task1) failed: %v", err)
 	}
@@ -85,7 +85,7 @@ func TestIntegration_FullFlow(t *testing.T) {
 		t.Errorf("expected task1 display num 3, got %d", task1.DisplayNum)
 	}
 
-	task2, err := eng.CreateItem("task", "JWT validation", fmt.Sprintf("%d", story.DisplayNum), "", "medium", "alice", []string{"auth"})
+	task2, err := eng.CreateItem("task", "JWT validation", fmt.Sprintf("%d", story.DisplayNum), "", "medium", "alice", []string{"auth"}, "")
 	if err != nil {
 		t.Fatalf("CreateItem (task2) failed: %v", err)
 	}
@@ -246,7 +246,7 @@ func TestIntegration_AssignAndEdit(t *testing.T) {
 		t.Fatalf("AddUser failed: %v", err)
 	}
 
-	task, err := eng.CreateItem("task", "Test task", "", "", "low", "dev1", nil)
+	task, err := eng.CreateItem("task", "Test task", "", "", "low", "dev1", nil, "")
 	if err != nil {
 		t.Fatalf("CreateItem failed: %v", err)
 	}
@@ -309,7 +309,7 @@ func TestIntegration_BoardConfig(t *testing.T) {
 	}
 
 	// Remove column with items should fail
-	eng.CreateItem("task", "blocker", "", "", "", "testuser", nil)
+	eng.CreateItem("task", "blocker", "", "", "", "testuser", nil, "")
 	eng.MoveItem("1", "todo", "", "")
 	if err := eng.RemoveColumn("todo"); err == nil {
 		t.Error("expected error removing column with items")
@@ -350,13 +350,13 @@ func TestIntegration_UserManagement(t *testing.T) {
 func TestIntegration_GetChildren(t *testing.T) {
 	eng := setupTestEngine(t)
 
-	parent, err := eng.CreateItem("epic", "Parent", "", "", "", "testuser", nil)
+	parent, err := eng.CreateItem("epic", "Parent", "", "", "", "testuser", nil, "")
 	if err != nil {
 		t.Fatalf("CreateItem (parent) failed: %v", err)
 	}
 
 	for i := 0; i < 3; i++ {
-		_, err := eng.CreateItem("story", fmt.Sprintf("Child %d", i), fmt.Sprintf("%d", parent.DisplayNum), "", "", "testuser", nil)
+		_, err := eng.CreateItem("story", fmt.Sprintf("Child %d", i), fmt.Sprintf("%d", parent.DisplayNum), "", "", "testuser", nil, "")
 		if err != nil {
 			t.Fatalf("CreateItem (child %d) failed: %v", i, err)
 		}
@@ -399,7 +399,7 @@ func TestIntegration_CustomColumns(t *testing.T) {
 	}
 
 	// Items should start in first custom column
-	item, err := eng.CreateItem("task", "Test", "", "", "", "testuser", nil)
+	item, err := eng.CreateItem("task", "Test", "", "", "", "testuser", nil, "")
 	if err != nil {
 		t.Fatalf("CreateItem failed: %v", err)
 	}
@@ -412,11 +412,11 @@ func TestIntegration_PlanWorkflow(t *testing.T) {
 	eng := setupTestEngine(t)
 
 	// Create items
-	epic, err := eng.CreateItem("epic", "Auth System", "", "", "high", "testuser", nil)
+	epic, err := eng.CreateItem("epic", "Auth System", "", "", "high", "testuser", nil, "")
 	if err != nil {
 		t.Fatalf("CreateItem epic failed: %v", err)
 	}
-	task, err := eng.CreateItem("task", "JWT Validation", fmt.Sprintf("%d", epic.DisplayNum), "", "medium", "testuser", nil)
+	task, err := eng.CreateItem("task", "JWT Validation", fmt.Sprintf("%d", epic.DisplayNum), "", "medium", "testuser", nil, "")
 	if err != nil {
 		t.Fatalf("CreateItem task failed: %v", err)
 	}
@@ -456,7 +456,7 @@ func TestIntegration_PlanWorkflow(t *testing.T) {
 	}
 
 	// Link additional item
-	task2, _ := eng.CreateItem("task", "Middleware", fmt.Sprintf("%d", epic.DisplayNum), "", "medium", "testuser", nil)
+	task2, _ := eng.CreateItem("task", "Middleware", fmt.Sprintf("%d", epic.DisplayNum), "", "medium", "testuser", nil, "")
 	if err := eng.LinkPlan(fmt.Sprintf("%d", plan.DisplayNum), []string{fmt.Sprintf("%d", task2.DisplayNum)}); err != nil {
 		t.Fatalf("LinkPlan failed: %v", err)
 	}
@@ -519,13 +519,16 @@ func TestIntegration_AssignThenMoveFlow(t *testing.T) {
 	}
 	eng := engine.New(s)
 
-	// Register a user
+	// Register users
+	if _, err := eng.AddUser("testuser", "human", "local"); err != nil {
+		t.Fatalf("AddUser (human) failed: %v", err)
+	}
 	if _, err := eng.AddUser("agent-1", "agent", "claude-code"); err != nil {
-		t.Fatalf("AddUser failed: %v", err)
+		t.Fatalf("AddUser (agent) failed: %v", err)
 	}
 
 	// Create an assigned item
-	task, err := eng.CreateItem("task", "Normal task", "", "has owner", "medium", "agent-1", nil)
+	task, err := eng.CreateItem("task", "Normal task", "", "has owner", "medium", "agent-1", nil, "")
 	if err != nil {
 		t.Fatalf("CreateItem failed: %v", err)
 	}
@@ -606,7 +609,7 @@ func TestIntegration_AssignThenMoveFlow(t *testing.T) {
 func TestIntegration_CreateRejectsEmptyAssignee(t *testing.T) {
 	eng := setupTestEngine(t)
 
-	_, err := eng.CreateItem("task", "No owner", "", "desc", "medium", "", nil)
+	_, err := eng.CreateItem("task", "No owner", "", "desc", "medium", "", nil, "")
 	if err == nil {
 		t.Fatal("CreateItem with empty assignee should fail")
 	}
@@ -625,7 +628,7 @@ func TestIntegration_AllGuardsBlockUnassigned(t *testing.T) {
 	_, _ = eng.AddUser("user1", "human", "local")
 
 	// Create a blocker item (assigned)
-	blocker, _ := eng.CreateItem("task", "Blocker", "", "desc", "medium", "user1", nil)
+	blocker, _ := eng.CreateItem("task", "Blocker", "", "desc", "medium", "user1", nil, "")
 
 	// Create unassigned item via store
 	var itemID string

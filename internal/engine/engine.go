@@ -22,7 +22,7 @@ func (e *Engine) BoardFilePath() string {
 	return e.store.BoardFilePath()
 }
 
-func (e *Engine) CreateItem(itemType, title, parentRef, description, priority, assignee string, tags []string) (*domain.Item, error) {
+func (e *Engine) CreateItem(itemType, title, parentRef, description, priority, assignee string, tags []string, sponsor string) (*domain.Item, error) {
 	if err := validateCreateInput(itemType, title, priority); err != nil {
 		return nil, err
 	}
@@ -46,7 +46,13 @@ func (e *Engine) CreateItem(itemType, title, parentRef, description, priority, a
 			return fmt.Errorf("unknown assignee %q: %w\nRun 'ob user list' to see registered users", assignee, err)
 		}
 
+		resolvedSponsor, err := resolveSponsor(board, resolvedAssignee, sponsor, parentID)
+		if err != nil {
+			return err
+		}
+
 		item := buildItem(board, itemType, title, description, priority, resolvedAssignee, parentID, tags)
+		item.Sponsor = resolvedSponsor
 		board.Items[item.ID] = item
 		board.DisplayMap[item.DisplayNum] = item.ID
 		board.NextDisplay++
