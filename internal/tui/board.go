@@ -26,7 +26,10 @@ func (a App) renderBoard() string {
 				nativeCount++
 			}
 		}
-		cardViews := a.renderGroupedCards(items, i)
+		var cardViews []string
+		for _, item := range items {
+			cardViews = append(cardViews, a.renderCard(item, a.isItemAtCursor(item)))
+		}
 		cardContent := ""
 		if len(cardViews) > 0 {
 			allCards := strings.Join(cardViews, "\n")
@@ -61,106 +64,24 @@ func (a App) visibleItemsInColumn(colIdx int) []*domain.Item {
 		return a.humanReviewItems()
 	}
 
-	// Collect all items in this column.
+	// Collect items in this column
 	var colItems []*domain.Item
 	for _, item := range a.board.Items {
 		if item.Status == colName {
 			colItems = append(colItems, item)
 		}
 	}
-	sort.Slice(colItems, func(i, j int) bool {
-		return colItems[i].DisplayNum > colItems[j].DisplayNum
-	})
 
-	// Include cross-column parent epics so they are navigable.
-	crossColEpic := map[string]bool{}
+	// Filter out items hidden by collapsed ancestors
+	var visible []*domain.Item
 	for _, item := range colItems {
-		epicID := findEpicAncestor(a.board, item)
-		if epicID == "" || epicID == item.ID || crossColEpic[epicID] {
-			continue
-		}
-		epic, exists := a.board.Items[epicID]
-		if exists && epic.Status != colName {
-			colItems = append(colItems, epic)
-			crossColEpic[epicID] = true
+		if !isHiddenByCollapse(a.board, item, a.collapsed) {
+			visible = append(visible, item)
 		}
 	}
 
-	// Re-sort after adding cross-column epics.
-	sort.Slice(colItems, func(i, j int) bool {
-		return colItems[i].DisplayNum > colItems[j].DisplayNum
-	})
-
-	// Filter collapsed children.
-	var filtered []*domain.Item
-	for _, item := range colItems {
-		epicID := findEpicAncestor(a.board, item)
-		if epicID == "" || epicID == item.ID {
-			filtered = append(filtered, item)
-			continue
-		}
-		if !a.collapsed[epicID] {
-			filtered = append(filtered, item)
-			continue
-		}
-		// Collapsed child — epic (in-column or cross-column) represents the group.
-		// Filter out all children.
-	}
-
-	// Reorder to match visual render order: epic groups first, then orphans.
-	return a.renderOrderItems(filtered, colIdx)
-}
-
-// renderOrderItems reorders items to match the visual layout produced by
-// renderGroupedCards: epic groups (epic card first, then children) followed
-// by orphan items. This keeps cursor navigation consistent with display.
-func (a App) renderOrderItems(items []*domain.Item, colIdx int) []*domain.Item {
-	type group struct {
-		epicID   string
-		epic     *domain.Item
-		children []*domain.Item
-	}
-
-	groupOrder := []string{}
-	groups := map[string]*group{}
-	var orphans []*domain.Item
-
-	for _, item := range items {
-		epicID := findEpicAncestor(a.board, item)
-		if epicID == "" {
-			if item.Type == domain.ItemTypeEpic {
-				if _, ok := groups[item.ID]; !ok {
-					groups[item.ID] = &group{epicID: item.ID, epic: item}
-					groupOrder = append(groupOrder, item.ID)
-				}
-			} else {
-				orphans = append(orphans, item)
-			}
-			continue
-		}
-		g, ok := groups[epicID]
-		if !ok {
-			g = &group{epicID: epicID}
-			groups[epicID] = g
-			groupOrder = append(groupOrder, epicID)
-		}
-		if item.ID == epicID {
-			g.epic = item
-		} else {
-			g.children = append(g.children, item)
-		}
-	}
-
-	var ordered []*domain.Item
-	for _, eid := range groupOrder {
-		g := groups[eid]
-		if g.epic != nil {
-			ordered = append(ordered, g.epic)
-		}
-		ordered = append(ordered, g.children...)
-	}
-	ordered = append(ordered, orphans...)
-	return ordered
+	// Order hierarchically: parents before children, depth-first by DisplayNum
+	return orderItemsHierarchically(a.board, visible)
 }
 
 func (a App) renderBoardWithOverlay(overlay string) string {
@@ -170,8 +91,6 @@ func (a App) renderBoardWithOverlay(overlay string) string {
 }
 
 // columnWidth returns the content width for each column.
-// Layout per column: border(2) + content(w) + marginRight(1).
-// Total: n*(w+3) - 1 <= terminal_width  =>  w = (terminal_width + 1 - 3*n) / n
 func (a App) columnWidth() int {
 	if a.width == 0 || len(a.columns) == 0 {
 		return 22

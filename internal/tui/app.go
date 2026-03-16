@@ -257,7 +257,10 @@ func (a *App) scrollToSelected() {
 	}
 
 	items := a.visibleItemsInColumn(a.cursorCol)
-	cardViews := a.renderGroupedCards(items, a.cursorCol)
+	var cardViews []string
+	for _, it := range items {
+		cardViews = append(cardViews, a.renderCard(it, a.isItemAtCursor(it)))
+	}
 	if len(cardViews) == 0 {
 		a.colModels[a.cursorCol].ScrollToLine(0)
 		return
@@ -555,9 +558,8 @@ func (a App) handleBoardKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	case " ":
 		if item := a.selectedItem(); item != nil {
-			epicID := findEpicAncestor(a.board, item)
-			if epicID != "" {
-				a.collapsed[epicID] = !a.collapsed[epicID]
+			if hasChildItems(a.board, item.ID) {
+				a.collapsed[item.ID] = !a.collapsed[item.ID]
 				a.clampCursor()
 			}
 		}

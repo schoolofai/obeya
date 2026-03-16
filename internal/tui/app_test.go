@@ -337,7 +337,10 @@ func TestTUI_DescriptionAccordion(t *testing.T) {
 	boardFile, eng := testBoard(t)
 	tm := startAndWait(t, eng, boardFile, 120, 40)
 
-	// Press 'v' to expand description on the selected item (item-2 in backlog)
+	// Navigate to item #2 (has a description) — hierarchical ordering puts #1 first
+	tm.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
+	time.Sleep(50 * time.Millisecond)
+	// Press 'v' to expand description
 	tm.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("v")})
 	time.Sleep(100 * time.Millisecond)
 

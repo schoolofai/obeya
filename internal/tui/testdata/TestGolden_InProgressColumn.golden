@@ -2,20 +2,20 @@
 ╭─────────────────────╮ ╭─────────────────────╮ ╭─────────────────────╮ ╭─────────────────────╮ ╭─────────────────────╮ 
 │BACKLOG (2)          │ │TODO (1)             │ │IN-PROGRESS (1)      │ │REVIEW (1)           │ │DONE (1)             │ 
 │╭───────────────────╮│ │╭───────────────────╮│ │┏━━━━━━━━━━━━━━━━━━━┓│ │╭───────────────────╮│ │╭───────────────────╮│ 
-││ #2 Add token      ││ ││ #3 Another task   ││ │┃ #4 Implement the  ┃│ ││ #5 Fix bug in     ││ ││ #6 Done task      ││ 
-││    refresh        ││ ││    in todo column ││ │┃    full           ┃│ ││    review         ││ ││ task ●            ││ 
-││    handling for   ││ ││ task ●            ││ │┃    end-to-end     ┃│ ││ task ●●           ││ ││ @unassigned       ││ 
-││    expired        ││ ││ @unassigned       ││ │┃    integration    ┃│ ││ @unassigned       ││ │╰───────────────────╯│ 
-││    sessions with  ││ │╰───────────────────╯│ │┃    test suite for ┃│ │╰───────────────────╯│ │                     │ 
-││    automatic      ││ │                     │ │┃    cloud          ┃│ │                     │ │                     │ 
-││    retry logic    ││ │                     │ │┃    synchronizatio ┃│ │                     │ │                     │ 
-││ story ●●          ││ │                     │ │┃    n with         ┃│ │                     │ │                     │ 
-││ @unassigned       ││ │                     │ │┃    real-time      ┃│ │                     │ │                     │ 
-│╰───────────────────╯│ │                     │ │┃    WebSocket      ┃│ │                     │ │                     │ 
-│╭───────────────────╮│ │                     │ │┃    events         ┃│ │                     │ │                     │ 
-││ #1 Short task     ││ │                     │ │┃ task ●●●          ┃│ │                     │ │                     │ 
-││ task ●●           ││ │                     │ │┃ @unassigned       ┃│ │                     │ │                     │ 
-││ @unassigned       ││ │                     │ │┗━━━━━━━━━━━━━━━━━━━┛│ │                     │ │                     │ 
+││ #1 Short task     ││ ││ #3 Another task   ││ │┃ #4 Implement the  ┃│ ││ #5 Fix bug in     ││ ││ #6 Done task      ││ 
+││ task ●●           ││ ││    in todo column ││ │┃    full           ┃│ ││    review         ││ ││ task ●            ││ 
+││ @unassigned       ││ ││ task ●            ││ │┃    end-to-end     ┃│ ││ task ●●           ││ ││ @unassigned       ││ 
+│╰───────────────────╯│ ││ @unassigned       ││ │┃    integration    ┃│ ││ @unassigned       ││ │╰───────────────────╯│ 
+│╭───────────────────╮│ │╰───────────────────╯│ │┃    test suite for ┃│ │╰───────────────────╯│ │                     │ 
+││ ┃#2 Add token     ││ │                     │ │┃    cloud          ┃│ │                     │ │                     │ 
+││ ┃   refresh       ││ │                     │ │┃    synchronizatio ┃│ │                     │ │                     │ 
+││ ┃   handling for  ││ │                     │ │┃    n with         ┃│ │                     │ │                     │ 
+││ ┃   expired       ││ │                     │ │┃    real-time      ┃│ │                     │ │                     │ 
+││ ┃   sessions with ││ │                     │ │┃    WebSocket      ┃│ │                     │ │                     │ 
+││ ┃   automatic     ││ │                     │ │┃    events         ┃│ │                     │ │                     │ 
+││ ┃   retry logic   ││ │                     │ │┃ task ●●●          ┃│ │                     │ │                     │ 
+││ ┃story ●●         ││ │                     │ │┃ @unassigned       ┃│ │                     │ │                     │ 
+││ ┃@unassigned      ││ │                     │ │┗━━━━━━━━━━━━━━━━━━━┛│ │                     │ │                     │ 
 │╰───────────────────╯│ │                     │ │                     │ │                     │ │                     │ 
 │                     │ │                     │ │                     │ │                     │ │                     │ 
 │                     │ │                     │ │                     │ │                     │ │                     │ 
