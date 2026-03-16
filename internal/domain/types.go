@@ -110,6 +110,11 @@ type Item struct {
 	CreatedAt   time.Time      `json:"created_at"`
 	UpdatedAt   time.Time      `json:"updated_at"`
 	History     []ChangeRecord `json:"history,omitempty"`
+
+	Sponsor       string         `json:"sponsor,omitempty"`
+	Confidence    *int           `json:"confidence,omitempty"`
+	ReviewContext *ReviewContext  `json:"review_context,omitempty"`
+	HumanReview   *HumanReview   `json:"human_review,omitempty"`
 }
 
 type Board struct {
@@ -163,4 +168,42 @@ func (b *Board) HasColumn(name string) bool {
 		}
 	}
 	return false
+}
+
+// ReviewContext is the structured context an agent provides when completing work.
+type ReviewContext struct {
+	Purpose      string       `json:"purpose"`
+	FilesChanged []FileChange `json:"files_changed,omitempty"`
+	TestsWritten []TestResult `json:"tests_written,omitempty"`
+	Proof        []ProofItem  `json:"proof,omitempty"`
+	Reasoning    string       `json:"reasoning,omitempty"`
+	Reproduce    []string     `json:"reproduce,omitempty"`
+}
+
+// FileChange represents a single file modification in a review context.
+type FileChange struct {
+	Path    string `json:"path"`
+	Added   int    `json:"added"`
+	Removed int    `json:"removed"`
+	Diff    string `json:"diff,omitempty"`
+}
+
+// TestResult represents the outcome of a single test.
+type TestResult struct {
+	Name   string `json:"name"`
+	Passed bool   `json:"passed"`
+}
+
+// ProofItem is a single verification check the agent performed.
+type ProofItem struct {
+	Check  string `json:"check"`
+	Status string `json:"status"`
+	Detail string `json:"detail,omitempty"`
+}
+
+// HumanReview tracks the human review state of an agent-completed item.
+type HumanReview struct {
+	Status     string    `json:"status"`
+	ReviewedBy string    `json:"reviewed_by,omitempty"`
+	ReviewedAt time.Time `json:"reviewed_at,omitempty"`
 }
