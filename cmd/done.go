@@ -40,9 +40,6 @@ Examples:
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ref := args[0]
 
-		if !cmd.Flags().Changed("confidence") {
-			return fmt.Errorf("--confidence is required. Provide 0-100")
-		}
 		if doneConfidence < 0 || doneConfidence > 100 {
 			return fmt.Errorf("--confidence must be between 0 and 100, got %d", doneConfidence)
 		}
@@ -204,5 +201,8 @@ func init() {
 	doneCmd.Flags().StringVar(&doneProof, "proof", "", "proof items (check:status[:detail],...)")
 	doneCmd.Flags().StringVar(&doneReasoning, "reasoning", "", "agent decision rationale")
 	doneCmd.Flags().BoolVar(&doneCtxStdin, "context-stdin", false, "read ReviewContext JSON from stdin")
+	if err := doneCmd.MarkFlagRequired("confidence"); err != nil {
+		panic(fmt.Sprintf("failed to mark confidence flag required: %v", err))
+	}
 	rootCmd.AddCommand(doneCmd)
 }

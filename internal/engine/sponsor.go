@@ -37,15 +37,24 @@ func resolveSponsor(board *domain.Board, assigneeID string, explicitSponsor stri
 	return "", sponsorRequiredError(humans)
 }
 
-func validateExplicitSponsor(board *domain.Board, sponsorID string) (string, error) {
-	sponsor, ok := board.Users[sponsorID]
-	if !ok {
-		return "", fmt.Errorf("unknown sponsor %q: not found in board users", sponsorID)
+func validateExplicitSponsor(board *domain.Board, sponsor string) (string, error) {
+	// Try direct ID lookup first
+	if u, ok := board.Users[sponsor]; ok {
+		if u.Type != domain.IdentityHuman {
+			return "", fmt.Errorf("sponsor %q is not a human identity", u.Name)
+		}
+		return sponsor, nil
 	}
-	if sponsor.Type != domain.IdentityHuman {
-		return "", fmt.Errorf("sponsor %q is not a human identity", sponsor.Name)
+	// Fall back to name resolution (users pass names like --sponsor niladri)
+	resolved, err := board.ResolveUserID(sponsor)
+	if err != nil {
+		return "", fmt.Errorf("unknown sponsor %q: %w", sponsor, err)
 	}
-	return sponsorID, nil
+	u := board.Users[resolved]
+	if u.Type != domain.IdentityHuman {
+		return "", fmt.Errorf("sponsor %q is not a human identity", u.Name)
+	}
+	return resolved, nil
 }
 
 func sponsorRequiredError(humans []*domain.Identity) error {
