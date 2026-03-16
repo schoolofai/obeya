@@ -65,6 +65,10 @@ func (e *Engine) CreateItem(itemType, title, parentRef, description, priority, a
 }
 
 func (e *Engine) CompleteItemWithContext(ref string, ctx domain.ReviewContext, confidence int, userID string, sessionID string) error {
+	if confidence < 0 || confidence > 100 {
+		return fmt.Errorf("confidence must be 0-100, got %d", confidence)
+	}
+
 	return e.store.Transaction(func(board *domain.Board) error {
 		id, err := board.ResolveID(ref)
 		if err != nil {

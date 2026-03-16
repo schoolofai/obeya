@@ -103,3 +103,22 @@ func TestResolveSponsor_ExplicitMustBeHuman(t *testing.T) {
 		t.Fatal("expected error: sponsor must be human")
 	}
 }
+
+func TestResolveSponsor_UnknownExplicitSponsor(t *testing.T) {
+	b := boardWithUsers([]string{"alice"}, []string{"claude"})
+	agentID := findUserID(b, "claude")
+	_, err := resolveSponsor(b, agentID, "nonexistent-id", "")
+	if err == nil {
+		t.Fatal("expected error for unknown sponsor")
+	}
+}
+
+func TestResolveSponsor_ParentExistsButNoSponsor(t *testing.T) {
+	b := boardWithUsers([]string{"alice", "bob"}, []string{"claude"})
+	agentID := findUserID(b, "claude")
+	b.Items["epic-1"] = &domain.Item{ID: "epic-1", Sponsor: ""}
+	_, err := resolveSponsor(b, agentID, "", "epic-1")
+	if err == nil {
+		t.Fatal("expected error: parent has no sponsor, multiple humans")
+	}
+}

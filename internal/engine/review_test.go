@@ -55,6 +55,9 @@ func TestReviewItem_Reviewed(t *testing.T) {
 	if item.HumanReview.ReviewedBy != aliceID {
 		t.Errorf("ReviewedBy = %q, want %q", item.HumanReview.ReviewedBy, aliceID)
 	}
+	if item.HumanReview.ReviewedAt.IsZero() {
+		t.Error("ReviewedAt should be set")
+	}
 }
 
 func TestReviewItem_Hidden(t *testing.T) {
@@ -186,5 +189,93 @@ func TestCompleteItemWithContext_HumanIdentityAllowed(t *testing.T) {
 	err := eng.CompleteItemWithContext("1", ctx, 90, aliceID, "sess-1")
 	if err != nil {
 		t.Fatalf("unexpected error: humans should be able to provide review context: %v", err)
+	}
+}
+
+func TestCompleteItemWithContext_InvalidConfidence(t *testing.T) {
+	eng, b := setupCompleteTestEngine(t, "in-progress")
+	agentID := findUserID(b, "claude")
+	ctx := domain.ReviewContext{Purpose: "test"}
+
+	err := eng.CompleteItemWithContext("1", ctx, 150, agentID, "sess-1")
+	if err == nil {
+		t.Fatal("expected error for confidence > 100")
+	}
+
+	err = eng.CompleteItemWithContext("1", ctx, -5, agentID, "sess-1")
+	if err == nil {
+		t.Fatal("expected error for confidence < 0")
+	}
+}
+
+func TestCompleteItemWithContext_UnassignedFails(t *testing.T) {
+	dir := t.TempDir()
+	s := store.NewJSONStore(dir)
+	if err := s.InitBoard("unassigned-test", nil); err != nil {
+		t.Fatal(err)
+	}
+	eng := New(s)
+
+	_ = s.Transaction(func(b *domain.Board) error {
+		aliceID := domain.GenerateID()
+		b.Users[aliceID] = &domain.Identity{ID: aliceID, Name: "alice", Type: domain.IdentityHuman}
+
+		item := &domain.Item{
+			ID: "item-1", DisplayNum: b.NextDisplay, Title: "unassigned",
+			Type: domain.ItemTypeTask, Status: "in-progress",
+			Assignee: "", Priority: domain.PriorityMedium,
+		}
+		b.Items["item-1"] = item
+		b.DisplayMap[b.NextDisplay] = "item-1"
+		b.NextDisplay++
+		return nil
+	})
+
+	ctx := domain.ReviewContext{Purpose: "test"}
+	err := eng.CompleteItemWithContext("1", ctx, 50, "alice", "sess-1")
+	if err == nil {
+		t.Fatal("expected error for unassigned item")
+	}
+}
+
+func TestReviewItem_HistoryEntry(t *testing.T) {
+	eng, b := setupReviewTestEngine(t)
+	aliceID := findUserID(b, "alice")
+	if err := eng.ReviewItem("1", "reviewed", aliceID, "sess-1"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	item, _ := eng.GetItem("1")
+	if len(item.History) == 0 {
+		t.Fatal("expected history entries")
+	}
+	last := item.History[len(item.History)-1]
+	if last.Action != "human-review" {
+		t.Errorf("last history action = %q, want 'human-review'", last.Action)
+	}
+	if last.Detail != "reviewed" {
+		t.Errorf("last history detail = %q, want 'reviewed'", last.Detail)
+	}
+	if last.UserID != aliceID {
+		t.Errorf("last history UserID = %q, want %q", last.UserID, aliceID)
+	}
+}
+
+func TestCompleteItemWithContext_HistoryEntry(t *testing.T) {
+	eng, b := setupCompleteTestEngine(t, "in-progress")
+	agentID := findUserID(b, "claude")
+	ctx := domain.ReviewContext{Purpose: "JWT migration"}
+	if err := eng.CompleteItemWithContext("1", ctx, 45, agentID, "sess-1"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	item, _ := eng.GetItem("1")
+	if len(item.History) == 0 {
+		t.Fatal("expected history entries")
+	}
+	last := item.History[len(item.History)-1]
+	if last.Action != "complete-with-context" {
+		t.Errorf("last history action = %q, want 'complete-with-context'", last.Action)
+	}
+	if last.UserID != agentID {
+		t.Errorf("last history UserID = %q, want %q", last.UserID, agentID)
 	}
 }
