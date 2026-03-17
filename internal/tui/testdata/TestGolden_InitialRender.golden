@@ -7,19 +7,19 @@
 │┃ @unassigned     ┃│ ││    column       ││ ││    end-to-end   ││ ││ task ●●         ││ ││ @unassigned     ││ │         
 │┗━━━━━━━━━━━━━━━━━┛│ ││ task ●          ││ ││    integration  ││ ││ @unassigned     ││ │╰─────────────────╯│ │         
 │╭─────────────────╮│ ││ @unassigned     ││ ││    test suite   ││ │╰─────────────────╯│ │                   │ │         
-││ ┃ #2 Add token  ││ │╰─────────────────╯│ ││    for cloud    ││ │                   │ │                   │ │         
-││ ┃    refresh    ││ │                   │ ││    synchronizat ││ │                   │ │                   │ │         
-││ ┃    handling   ││ │                   │ ││    ion with     ││ │                   │ │                   │ │         
-││ ┃    for        ││ │                   │ ││    real-time    ││ │                   │ │                   │ │         
-││ ┃    expired    ││ │                   │ ││    WebSocket    ││ │                   │ │                   │ │         
-││ ┃    sessions   ││ │                   │ ││    events       ││ │                   │ │                   │ │         
-││ ┃    with       ││ │                   │ ││ task ●●●        ││ │                   │ │                   │ │         
-││ ┃    automatic  ││ │                   │ ││ @unassigned     ││ │                   │ │                   │ │         
-││ ┃    retry      ││ │                   │ │╰─────────────────╯│ │                   │ │                   │ │         
-││ ┃    logic      ││ │                   │ │                   │ │                   │ │                   │ │         
-││ ┃ story ●●      ││ │                   │ │                   │ │                   │ │                   │ │         
-││ ┃ @unassigned   ││ │                   │ │                   │ │                   │ │                   │ │         
+││ #2 Add token    ││ │╰─────────────────╯│ ││    for cloud    ││ │                   │ │                   │ │         
+││    refresh      ││ │                   │ ││    synchronizat ││ │                   │ │                   │ │         
+││    handling for ││ │                   │ ││    ion with     ││ │                   │ │                   │ │         
+││    expired      ││ │                   │ ││    real-time    ││ │                   │ │                   │ │         
+││    sessions     ││ │                   │ ││    WebSocket    ││ │                   │ │                   │ │         
+││    with         ││ │                   │ ││    events       ││ │                   │ │                   │ │         
+││    automatic    ││ │                   │ ││ task ●●●        ││ │                   │ │                   │ │         
+││    retry logic  ││ │                   │ ││ @unassigned     ││ │                   │ │                   │ │         
+││ story ●●        ││ │                   │ │╰─────────────────╯│ │                   │ │                   │ │         
+││ @unassigned     ││ │                   │ │                   │ │                   │ │                   │ │         
 │╰─────────────────╯│ │                   │ │                   │ │                   │ │                   │ │         
+│                   │ │                   │ │                   │ │                   │ │                   │ │         
+│                   │ │                   │ │                   │ │                   │ │                   │ │         
 │                   │ │                   │ │                   │ │                   │ │                   │ │         
 │                   │ │                   │ │                   │ │                   │ │                   │ │         
 │                   │ │                   │ │                   │ │                   │ │                   │ │         

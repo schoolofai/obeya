@@ -11,29 +11,16 @@ import (
 )
 
 func (a App) renderCard(item *domain.Item, selected bool) string {
-	return a.renderCardIndented(item, selected, a.columnWidth(), 0)
+	return a.renderCardWithWidth(item, selected, a.columnWidth())
 }
 
 func (a App) renderCardWithWidth(item *domain.Item, selected bool, w int) string {
-	return a.renderCardIndented(item, selected, w, 0)
-}
-
-// renderCardIndented renders a card at the given column width with optional
-// left margin. The margin is handled by lipgloss MarginLeft, keeping the
-// card borders intact and visible.
-func (a App) renderCardIndented(item *domain.Item, selected bool, colW int, indent int) string {
-	// Card occupies colW - indent visual chars total
-	w := colW - indent
-	barColor, hasBar := leftBarStyle(item.Type)
 	innerW := w - 2 // lipgloss Width excludes border
 	if innerW < 12 {
 		innerW = 12
 	}
 
 	contentW := innerW - 2 // padding
-	if hasBar {
-		contentW -= 2 // bar + space
-	}
 	if contentW < 8 {
 		contentW = 8
 	}
@@ -46,11 +33,9 @@ func (a App) renderCardIndented(item *domain.Item, selected bool, colW int, inde
 
 	content := strings.Join(lines, "\n")
 
-	if hasBar {
-		content = prependLeftBar(content, barColor)
-	}
-
-	return a.applyCardStyleFull(item, selected, content, innerW, indent)
+	// Use BorderLeftForeground for type-colored left border
+	barColor, hasBar := leftBarStyle(item.Type)
+	return a.applyCardStyleColored(item, selected, content, innerW, barColor, hasBar)
 }
 
 func (a App) buildCardLines(item *domain.Item, selected bool, contentW int) []string {
@@ -144,15 +129,6 @@ func (a App) buildTypePriorityLine(item *domain.Item) []string {
 	return []string{line}
 }
 
-func prependLeftBar(content string, color lipgloss.Color) string {
-	bar := lipgloss.NewStyle().Foreground(color).Render("┃") + " "
-	lines := strings.Split(content, "\n")
-	for i, line := range lines {
-		lines[i] = bar + line
-	}
-	return strings.Join(lines, "\n")
-}
-
 func (a App) appendMetaLine(lines []string, item *domain.Item) []string {
 	var metaParts []string
 	if item.Assignee != "" {
@@ -211,15 +187,11 @@ func (a App) appendReviewAccordion(lines []string, item *domain.Item, selected b
 	return lines
 }
 
-func (a App) applyCardStyle(item *domain.Item, selected bool, content string) string {
-	return a.applyCardStyleFull(item, selected, content, 0, 0)
-}
-
 func (a App) applyCardStyleWithWidth(item *domain.Item, selected bool, content string, innerW int) string {
-	return a.applyCardStyleFull(item, selected, content, innerW, 0)
+	return a.applyCardStyleColored(item, selected, content, innerW, "", false)
 }
 
-func (a App) applyCardStyleFull(item *domain.Item, selected bool, content string, innerW int, marginLeft int) string {
+func (a App) applyCardStyleColored(item *domain.Item, selected bool, content string, innerW int, barColor lipgloss.Color, hasBar bool) string {
 	var style lipgloss.Style
 	if selected {
 		style = selectedCardStyle
@@ -231,8 +203,8 @@ func (a App) applyCardStyleFull(item *domain.Item, selected bool, content string
 	if innerW > 0 {
 		style = style.Width(innerW)
 	}
-	if marginLeft > 0 {
-		style = style.MarginLeft(marginLeft)
+	if hasBar {
+		style = style.BorderLeftForeground(barColor)
 	}
 	return style.Render(content)
 }

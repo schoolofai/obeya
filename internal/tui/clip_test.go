@@ -95,11 +95,7 @@ func TestCardWidth_NoClipping(t *testing.T) {
 				w := widths[i]
 				items := app.visibleItemsInColumn(i)
 				for _, item := range items {
-					indent := 0
-					if app.isFirstLevelChild(item, colName) {
-						indent = 2
-					}
-					card := app.renderCardIndented(item, false, w, indent)
+					card := app.renderCardWithWidth(item, false, w)
 					lines := strings.Split(card, "\n")
 					for lineNum, line := range lines {
 						visW := lipgloss.Width(line)
