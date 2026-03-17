@@ -1,14 +1,14 @@
   Obeya Board: test-board
 ╭───────────────────╮ ╭───────────────────╮ ╭───────────────────╮ ╭───────────────────╮ ╭───────────────────╮ ╭─────────
 │BACKLOG (2)        │ │TODO (1)           │ │IN-PROGRESS (1)    │ │REVIEW (1)         │ │DONE (1)           │ │⚡ REVIEW
-│╭───────────────╮  │ │┏━━━━━━━━━━━━━━━┓  │ │╭───────────────╮  │ │╭───────────────╮  │ │╭───────────────╮  │ │         
-││ #1 Short task │  │ │┃ #3 Another    ┃  │ ││ #4 Implement  │  │ ││ #5 Fix bug in │  │ ││ #6 Done task  │  │ │         
-││ task ●●       │  │ │┃    task in    ┃  │ ││    the full   │  │ ││    review     │  │ ││ task ●        │  │ │         
-││ @unassigned   │  │ │┃    todo       ┃  │ ││    end-to-end │  │ ││ task ●●       │  │ ││ @unassigned   │  │ │         
-│╰───────────────╯  │ │┃    column     ┃  │ ││    integratio │  │ ││ @unassigned   │  │ │╰───────────────╯  │ │         
-│╭───────────────╮  │ │┃ task ●        ┃  │ ││    n test     │  │ │╰───────────────╯  │ │                   │ │         
-││ #2 Add token  │  │ │┃ @unassigned   ┃  │ ││    suite for  │  │ │                   │ │                   │ │         
-││    refresh    │  │ │┗━━━━━━━━━━━━━━━┛  │ ││    cloud      │  │ │                   │ │                   │ │         
+│╭───────────────╮  │ │╔═══════════════╗  │ │╭───────────────╮  │ │╭───────────────╮  │ │╭───────────────╮  │ │         
+││ #1 Short task │  │ │║ #3 Another    ║  │ ││ #4 Implement  │  │ ││ #5 Fix bug in │  │ ││ #6 Done task  │  │ │         
+││ task ●●       │  │ │║    task in    ║  │ ││    the full   │  │ ││    review     │  │ ││ task ●        │  │ │         
+││ @unassigned   │  │ │║    todo       ║  │ ││    end-to-end │  │ ││ task ●●       │  │ ││ @unassigned   │  │ │         
+│╰───────────────╯  │ │║    column     ║  │ ││    integratio │  │ ││ @unassigned   │  │ │╰───────────────╯  │ │         
+│╭───────────────╮  │ │║ task ●        ║  │ ││    n test     │  │ │╰───────────────╯  │ │                   │ │         
+││ #2 Add token  │  │ │║ @unassigned   ║  │ ││    suite for  │  │ │                   │ │                   │ │         
+││    refresh    │  │ │╚═══════════════╝  │ ││    cloud      │  │ │                   │ │                   │ │         
 ││    handling   │  │ │                   │ ││    synchroniz │  │ │                   │ │                   │ │         
 ││    for        │  │ │                   │ ││    ation with │  │ │                   │ │                   │ │         
 ││    expired    │  │ │                   │ ││    real-time  │  │ │                   │ │                   │ │         

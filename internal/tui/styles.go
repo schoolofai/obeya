@@ -14,8 +14,9 @@ var (
 			Padding(0, 1)
 
 	selectedCardStyle = lipgloss.NewStyle().
-				Border(lipgloss.ThickBorder()).
-				BorderForeground(lipgloss.Color("14")). // Bright cyan
+				Border(lipgloss.DoubleBorder()).
+				BorderForeground(lipgloss.Color("11")). // Bright yellow
+				Foreground(lipgloss.Color("15")).        // Bright white text
 				Bold(true).
 				Padding(0, 1)
 

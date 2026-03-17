@@ -1,13 +1,13 @@
   Obeya Board: test-board
 ╭────────────────╮ ╭────────────────╮ ╭────────────────╮ ╭────────────────╮ ╭───
 │BACKLOG (2)     │ │TODO (1)        │ │IN-PROGRESS (1) │ │REVIEW (1)      │ │DON
-│┏━━━━━━━━━━━━┓ ┃│ │╭────────────╮  │ │╭────────────╮ ┃│ │╭────────────╮  │ │╭──
-│┃ #1 Short   ┃ ┃│ ││ #3 Another │  │ ││ #4 Impleme │ ┃│ ││ #5 Fix bug │  │ ││ #
-│┃    task    ┃ ┃│ ││    task in │  │ ││    nt the  │ ┃│ ││    in      │  │ ││  
-│┃ task ●●    ┃ ┃│ ││    todo    │  │ ││    full    │ ┃│ ││    review  │  │ ││ t
-│┃ @unassigne ┃ ┃│ ││    column  │  │ ││    end-to- │ ┃│ ││ task ●●    │  │ ││ @
-│┃ d          ┃ ┃│ ││ task ●     │  │ ││    end     │ ┃│ ││ @unassigne │  │ ││ d
-│┗━━━━━━━━━━━━┛ ┃│ ││ @unassigne │  │ ││    integra │ ┃│ ││ d          │  │ │╰──
+│╔════════════╗ ┃│ │╭────────────╮  │ │╭────────────╮ ┃│ │╭────────────╮  │ │╭──
+│║ #1 Short   ║ ┃│ ││ #3 Another │  │ ││ #4 Impleme │ ┃│ ││ #5 Fix bug │  │ ││ #
+│║    task    ║ ┃│ ││    task in │  │ ││    nt the  │ ┃│ ││    in      │  │ ││  
+│║ task ●●    ║ ┃│ ││    todo    │  │ ││    full    │ ┃│ ││    review  │  │ ││ t
+│║ @unassigne ║ ┃│ ││    column  │  │ ││    end-to- │ ┃│ ││ task ●●    │  │ ││ @
+│║ d          ║ ┃│ ││ task ●     │  │ ││    end     │ ┃│ ││ @unassigne │  │ ││ d
+│╚════════════╝ ┃│ ││ @unassigne │  │ ││    integra │ ┃│ ││ d          │  │ │╰──
 │╭────────────╮ ┃│ ││ d          │  │ ││    tion    │ ┃│ │╰────────────╯  │ │   
 ││ #2 Add     │ ┃│ │╰────────────╯  │ ││    test    │ ┃│ │                │ │   
 ││    token   │ ┃│ │                │ ││    suite   │ ┃│ │                │ │   
