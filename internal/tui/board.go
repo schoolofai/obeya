@@ -108,7 +108,7 @@ func (a App) columnWidths() []int {
 	// => sum(w_i) <= terminal_width - 3*n
 
 	itemCounts := a.itemCountsPerColumn()
-	available := a.width - 3*n
+	available := a.width - 3*n - 1 // -1 so rightmost column border doesn't sit at terminal edge
 
 	var emptyCount, popCount int
 	for _, c := range itemCounts {
