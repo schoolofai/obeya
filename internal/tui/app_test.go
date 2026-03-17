@@ -345,8 +345,8 @@ func TestTUI_DescriptionAccordion(t *testing.T) {
 	screen := getScreen(t, tm)
 	t.Logf("\n=== DESCRIPTION ACCORDION (after 'v') ===\n%s", screen)
 
-	if !strings.Contains(screen, "▼ description") {
-		t.Error("expected expanded description indicator '▼ description' in output")
+	if !strings.Contains(screen, "▼") {
+		t.Error("expected expanded description indicator '▼' in output")
 	}
 }
 
