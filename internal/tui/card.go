@@ -11,22 +11,28 @@ import (
 )
 
 func (a App) renderCard(item *domain.Item, selected bool) string {
-	return a.renderCardWithWidth(item, selected, a.columnWidth())
+	return a.renderCardIndented(item, selected, a.columnWidth(), 0)
 }
 
 func (a App) renderCardWithWidth(item *domain.Item, selected bool, w int) string {
+	return a.renderCardIndented(item, selected, w, 0)
+}
+
+// renderCardIndented renders a card at the given column width with optional
+// left margin. The margin is handled by lipgloss MarginLeft, keeping the
+// card borders intact and visible.
+func (a App) renderCardIndented(item *domain.Item, selected bool, colW int, indent int) string {
+	// Card occupies colW - indent visual chars total
+	w := colW - indent
 	barColor, hasBar := leftBarStyle(item.Type)
-	// lipgloss Width sets the INNER content width (excludes border but includes padding)
-	// So innerW = w - 2 (border only), and lipgloss handles padding internally
-	innerW := w - 2
+	innerW := w - 2 // lipgloss Width excludes border
 	if innerW < 12 {
 		innerW = 12
 	}
 
-	// Content area = innerW - padding(2)
-	contentW := innerW - 2
+	contentW := innerW - 2 // padding
 	if hasBar {
-		contentW -= 2 // account for "┃ " (bar + space)
+		contentW -= 2 // bar + space
 	}
 	if contentW < 8 {
 		contentW = 8
@@ -44,7 +50,7 @@ func (a App) renderCardWithWidth(item *domain.Item, selected bool, w int) string
 		content = prependLeftBar(content, barColor)
 	}
 
-	return a.applyCardStyleWithWidth(item, selected, content, innerW)
+	return a.applyCardStyleFull(item, selected, content, innerW, indent)
 }
 
 func (a App) buildCardLines(item *domain.Item, selected bool, contentW int) []string {
@@ -206,10 +212,14 @@ func (a App) appendReviewAccordion(lines []string, item *domain.Item, selected b
 }
 
 func (a App) applyCardStyle(item *domain.Item, selected bool, content string) string {
-	return a.applyCardStyleWithWidth(item, selected, content, 0)
+	return a.applyCardStyleFull(item, selected, content, 0, 0)
 }
 
 func (a App) applyCardStyleWithWidth(item *domain.Item, selected bool, content string, innerW int) string {
+	return a.applyCardStyleFull(item, selected, content, innerW, 0)
+}
+
+func (a App) applyCardStyleFull(item *domain.Item, selected bool, content string, innerW int, marginLeft int) string {
 	var style lipgloss.Style
 	if selected {
 		style = selectedCardStyle
@@ -220,6 +230,9 @@ func (a App) applyCardStyleWithWidth(item *domain.Item, selected bool, content s
 	}
 	if innerW > 0 {
 		style = style.Width(innerW)
+	}
+	if marginLeft > 0 {
+		style = style.MarginLeft(marginLeft)
 	}
 	return style.Render(content)
 }

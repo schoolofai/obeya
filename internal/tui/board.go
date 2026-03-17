@@ -33,10 +33,7 @@ func (a App) renderBoard() string {
 			if a.isFirstLevelChild(item, colName) {
 				indent = 2
 			}
-			card := a.renderCardWithWidth(item, a.isItemAtCursor(item), w-indent)
-			if indent > 0 {
-				card = indentCard(card, indent)
-			}
+			card := a.renderCardIndented(item, a.isItemAtCursor(item), w, indent)
 			cardViews = append(cardViews, card)
 		}
 		cardContent := ""
@@ -302,16 +299,6 @@ func (a App) isFirstLevelChild(item *domain.Item, colName string) bool {
 		return true // grandparent missing → parent is effectively a root
 	}
 	return grandparent.Status != colName // indent only if grandparent is in a different column
-}
-
-// indentCard prepends spaces to each line of a rendered card.
-func indentCard(card string, spaces int) string {
-	indent := strings.Repeat(" ", spaces)
-	lines := strings.Split(card, "\n")
-	for i, line := range lines {
-		lines[i] = indent + line
-	}
-	return strings.Join(lines, "\n")
 }
 
 // humanReviewItems returns items that need human review, sorted by confidence ascending.
