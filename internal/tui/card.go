@@ -15,12 +15,14 @@ func (a App) renderCard(item *domain.Item, selected bool) string {
 }
 
 func (a App) renderCardWithWidth(item *domain.Item, selected bool, w int) string {
-	innerW := w - 2 // lipgloss Width excludes border
-	if innerW < 12 {
-		innerW = 12
+	// lipgloss Width = inner width (padding + content, excludes border)
+	// Card visual width = border(2) + Width = w
+	// So Width = w - 2, contentW = Width - padding(2) = w - 4
+	innerW := w - 2
+	if innerW < 10 {
+		innerW = 10
 	}
-
-	contentW := innerW - 2 // padding
+	contentW := innerW - 2
 	if contentW < 8 {
 		contentW = 8
 	}
