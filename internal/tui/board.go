@@ -34,12 +34,7 @@ func (a App) renderBoard() string {
 		}
 		cardContent := ""
 		if len(cardViews) > 0 {
-			allCards := strings.Join(cardViews, "\n")
-			cardLines := strings.Split(allCards, "\n")
-			for j, line := range cardLines {
-				cardLines[j] = padToWidth(line, w)
-			}
-			cardContent = strings.Join(cardLines, "\n")
+			cardContent = strings.Join(cardViews, "\n")
 		}
 		if i < len(a.colModels) {
 			a.colModels[i].SetContent(cardContent)
