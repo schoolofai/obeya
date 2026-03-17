@@ -33,9 +33,7 @@ func (a App) renderCardWithWidth(item *domain.Item, selected bool, w int) string
 
 	content := strings.Join(lines, "\n")
 
-	// Use BorderLeftForeground for type-colored left border
-	barColor, hasBar := leftBarStyle(item.Type)
-	return a.applyCardStyleColored(item, selected, content, innerW, barColor, hasBar)
+	return a.applyCardStyleWithWidth(item, selected, content, innerW)
 }
 
 func (a App) buildCardLines(item *domain.Item, selected bool, contentW int) []string {
@@ -188,10 +186,6 @@ func (a App) appendReviewAccordion(lines []string, item *domain.Item, selected b
 }
 
 func (a App) applyCardStyleWithWidth(item *domain.Item, selected bool, content string, innerW int) string {
-	return a.applyCardStyleColored(item, selected, content, innerW, "", false)
-}
-
-func (a App) applyCardStyleColored(item *domain.Item, selected bool, content string, innerW int, barColor lipgloss.Color, hasBar bool) string {
 	var style lipgloss.Style
 	if selected {
 		style = selectedCardStyle
@@ -202,9 +196,6 @@ func (a App) applyCardStyleColored(item *domain.Item, selected bool, content str
 	}
 	if innerW > 0 {
 		style = style.Width(innerW)
-	}
-	if hasBar {
-		style = style.BorderForeground(barColor)
 	}
 	return style.Render(content)
 }
