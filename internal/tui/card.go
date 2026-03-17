@@ -204,7 +204,7 @@ func (a App) applyCardStyleColored(item *domain.Item, selected bool, content str
 		style = style.Width(innerW)
 	}
 	if hasBar {
-		style = style.BorderLeftForeground(barColor)
+		style = style.BorderForeground(barColor)
 	}
 	return style.Render(content)
 }
