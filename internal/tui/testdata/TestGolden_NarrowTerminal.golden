@@ -1,24 +1,24 @@
   Obeya Board: test-board
 ╭────────────────╮ ╭────────────────╮ ╭────────────────╮ ╭────────────────╮ ╭───
 │BACKLOG (2)     │ │TODO (1)        │ │IN-PROGRESS (1) │ │REVIEW (1)      │ │DON
-│┏━━━━━━━━━━━━━━┃│ │╭──────────────╮│ │╭──────────────╮│ │╭──────────────╮│ │╭──
-│┃ #1 Short     ┃│ ││ #3 Another   ││ ││ #4 Implement ││ ││ #5 Fix bug   ││ ││ #
-│┃    task      ┃│ ││    task in   ││ ││    the full  ││ ││    in review ││ ││ t
-│┃ task ●●      ┃│ ││    todo      ││ ││    end-to-en ││ ││ task ●●      ││ ││ @
-│┃ @unassigned  ┃│ ││    column    ││ ││    d         ││ ││ @unassigned  ││ │╰──
-│┗━━━━━━━━━━━━━━┃│ ││ task ●       ││ ││    integrati ││ │╰──────────────╯│ │   
-│╭──────────────┃│ ││ @unassigned  ││ ││    on test   ││ │                │ │   
-││ #2 Add token ┃│ │╰──────────────╯│ ││    suite for ││ │                │ │   
-││    refresh   ┃│ │                │ ││    cloud     ││ │                │ │   
-││    handling  ┃│ │                │ ││    synchroni ││ │                │ │   
-││    for       ┃│ │                │ ││    zation    ││ │                │ │   
-││    expired   ┃│ │                │ ││    with      ││ │                │ │   
-││    sessions  ┃│ │                │ ││    real-time ││ │                │ │   
-││    with      ┃│ │                │ ││    WebSocket ││ │                │ │   
-││    automatic ┃│ │                │ ││    events    ││ │                │ │   
-││    retry     ┃│ │                │ ││ task ●●●     ││ │                │ │   
-││    logic     ┃│ │                │ ││ @unassigned  ││ │                │ │   
-││ story ●●     ┃│ │                │ │╰──────────────╯│ │                │ │   
-││ @unassigned  ││ │                │ │                │ │                │ │   
+│┏━━━━━━━━━━━━┓ ┃│ │╭────────────╮  │ │╭────────────╮ ┃│ │╭────────────╮  │ │╭──
+│┃ #1 Short   ┃ ┃│ ││ #3 Another │  │ ││ #4 Impleme │ ┃│ ││ #5 Fix bug │  │ ││ #
+│┃    task    ┃ ┃│ ││    task in │  │ ││    nt the  │ ┃│ ││    in      │  │ ││  
+│┃ task ●●    ┃ ┃│ ││    todo    │  │ ││    full    │ ┃│ ││    review  │  │ ││ t
+│┃ @unassigne ┃ ┃│ ││    column  │  │ ││    end-to- │ ┃│ ││ task ●●    │  │ ││ @
+│┃ d          ┃ ┃│ ││ task ●     │  │ ││    end     │ ┃│ ││ @unassigne │  │ ││ d
+│┗━━━━━━━━━━━━┛ ┃│ ││ @unassigne │  │ ││    integra │ ┃│ ││ d          │  │ │╰──
+│╭────────────╮ ┃│ ││ d          │  │ ││    tion    │ ┃│ │╰────────────╯  │ │   
+││ #2 Add     │ ┃│ │╰────────────╯  │ ││    test    │ ┃│ │                │ │   
+││    token   │ ┃│ │                │ ││    suite   │ ┃│ │                │ │   
+││    refresh │ ┃│ │                │ ││    for     │ ┃│ │                │ │   
+││    handlin │ ┃│ │                │ ││    cloud   │ ┃│ │                │ │   
+││    g for   │ ┃│ │                │ ││    synchro │ ┃│ │                │ │   
+││    expired │ ┃│ │                │ ││    nizatio │ ┃│ │                │ │   
+││    session │ ┃│ │                │ ││    n with  │ ┃│ │                │ │   
+││    s with  │ ││ │                │ ││    real-ti │ ││ │                │ │   
+││    automat │ ││ │                │ ││    me      │ ││ │                │ │   
+││    ic      │ ││ │                │ ││    WebSock │ ││ │                │ │   
+││    retry   │ ││ │                │ ││    et      │ ││ │                │ │   
 ╰────────────────╯ ╰────────────────╯ ╰────────────────╯ ╰────────────────╯ ╰───
   hjkl:nav  v:desc  m:move  c:create  d:del  +/-:resize  G:dag  D:dash  P:past  
