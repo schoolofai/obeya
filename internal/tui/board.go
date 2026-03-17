@@ -250,8 +250,9 @@ func (a App) clampToTerminalWidth(content string) string {
 	return strings.Join(lines, "\n")
 }
 
-// isFirstLevelChild returns true if the item's direct parent is in the same column.
-// Only the first level of nesting gets indentation — deeper children use breadcrumbs.
+// isFirstLevelChild returns true if the item's direct parent is a root in
+// this column (parent is in this column but parent's parent is NOT).
+// Only this first level gets indentation — deeper children use breadcrumbs.
 func (a App) isFirstLevelChild(item *domain.Item, colName string) bool {
 	if item.ParentID == "" {
 		return false
@@ -260,7 +261,18 @@ func (a App) isFirstLevelChild(item *domain.Item, colName string) bool {
 	if !ok {
 		return false
 	}
-	return parent.Status == colName
+	if parent.Status != colName {
+		return false
+	}
+	// Parent is in this column — check if parent is a root (its own parent NOT in this column)
+	if parent.ParentID == "" {
+		return true // parent has no parent → it's a root → indent this item
+	}
+	grandparent, ok := a.board.Items[parent.ParentID]
+	if !ok {
+		return true // grandparent missing → parent is effectively a root
+	}
+	return grandparent.Status != colName // indent only if grandparent is in a different column
 }
 
 // indentCard prepends spaces to each line of a rendered card.
