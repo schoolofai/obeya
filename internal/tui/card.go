@@ -41,10 +41,10 @@ func (a App) renderCardWithWidth(item *domain.Item, selected bool, w int) string
 func (a App) buildCardLines(item *domain.Item, selected bool, contentW int) []string {
 	var lines []string
 
-	// Breadcrumb (above title, faint)
+	// Breadcrumb (above title)
 	bc := breadcrumbPath(a.board, item, contentW)
 	if bc != "" {
-		lines = append(lines, breadcrumbStyle.Render(bc))
+		lines = append(lines, lipgloss.NewStyle().Foreground(lipgloss.Color("242")).Render(bc))
 	}
 
 	// Title with optional collapse indicator and child count badge

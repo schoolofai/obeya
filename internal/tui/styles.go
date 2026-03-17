@@ -111,7 +111,7 @@ var (
 	storyBarColor = lipgloss.Color("4")  // blue
 
 	// Breadcrumb
-	breadcrumbStyle = lipgloss.NewStyle().Faint(true)
+	breadcrumbStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("242"))
 
 	// Child count badge
 	epicBadgeStyle = lipgloss.NewStyle().
