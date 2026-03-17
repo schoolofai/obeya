@@ -29,9 +29,13 @@ func (a App) renderBoard() string {
 		}
 		var cardViews []string
 		for _, item := range items {
-			card := a.renderCardWithWidth(item, a.isItemAtCursor(item), w)
+			indent := 0
 			if a.isFirstLevelChild(item, colName) {
-				card = indentCard(card, 2)
+				indent = 2
+			}
+			card := a.renderCardWithWidth(item, a.isItemAtCursor(item), w-indent)
+			if indent > 0 {
+				card = indentCard(card, indent)
 			}
 			cardViews = append(cardViews, card)
 		}
