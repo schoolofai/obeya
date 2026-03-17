@@ -555,12 +555,7 @@ func (a App) handleBoardKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return a, a.loadBoard()
 		}
 	case " ":
-		if item := a.selectedItem(); item != nil {
-			if hasChildItems(a.board, item.ID) {
-				a.collapsed[item.ID] = !a.collapsed[item.ID]
-				a.clampCursor()
-			}
-		}
+		// No-op: hierarchy shown via indentation, no collapse
 	case "/":
 		a.input = newInputModel("Search:")
 		a.state = stateInput

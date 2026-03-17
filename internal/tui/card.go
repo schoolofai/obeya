@@ -65,22 +65,13 @@ func (a App) buildCardLines(item *domain.Item, selected bool, contentW int) []st
 func (a App) buildHierarchyTitleLines(item *domain.Item, contentW int) []string {
 	prefix := ""
 
-	// Collapse indicator for items with children
-	hasKids := hasChildItems(a.board, item.ID)
-	if hasKids {
-		if a.collapsed[item.ID] {
-			prefix += "▶ "
-		} else {
-			prefix += "▼ "
-		}
-	}
-
 	// Agent badge
 	if u, ok := a.board.Users[item.Assignee]; ok && u.Type == domain.IdentityAgent {
 		prefix += agentBadgeStyle.Render("AGENT") + " "
 	}
 
 	prefix += fmt.Sprintf("#%d ", item.DisplayNum)
+	hasKids := hasChildItems(a.board, item.ID)
 
 	// Title gets full remaining width — badge goes on its own line
 	prefixWidth := lipgloss.Width(prefix)

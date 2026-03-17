@@ -1,9 +1,7 @@
 package tui
 
 import (
-	"strings"
 	"testing"
-	"unicode/utf8"
 
 	"github.com/niladribose/obeya/internal/domain"
 )
@@ -28,7 +26,7 @@ func testHierarchyBoard() *domain.Board {
 func TestBreadcrumbPath(t *testing.T) {
 	b := testHierarchyBoard()
 	got := breadcrumbPath(b, b.Items["task-2"], 100)
-	want := "Auth Rewrite › Session Management"
+	want := "#1 › #4"
 	if got != want {
 		t.Errorf("breadcrumbPath = %q, want %q", got, want)
 	}
@@ -37,7 +35,7 @@ func TestBreadcrumbPath(t *testing.T) {
 func TestBreadcrumbPath_StoryUnderEpic(t *testing.T) {
 	b := testHierarchyBoard()
 	got := breadcrumbPath(b, b.Items["story-4"], 100)
-	want := "Auth Rewrite"
+	want := "#1"
 	if got != want {
 		t.Errorf("breadcrumbPath = %q, want %q", got, want)
 	}
@@ -51,29 +49,10 @@ func TestBreadcrumbPath_NoParent(t *testing.T) {
 	}
 }
 
-func TestBreadcrumbPath_Truncation(t *testing.T) {
-	b := testHierarchyBoard()
-	got := breadcrumbPath(b, b.Items["task-2"], 20)
-	// "Auth Rewrite › Session Management" is 35 runes, should truncate from left
-	runeLen := utf8.RuneCountInString(got)
-	if runeLen > 20 {
-		t.Errorf("breadcrumbPath rune length = %d, want <= 20, got %q", runeLen, got)
-	}
-	if got == "" {
-		t.Error("breadcrumbPath should not be empty even when truncated")
-	}
-	// Should start with "… › "
-	prefix := "… › "
-	if runeLen > utf8.RuneCountInString(prefix) && !strings.HasPrefix(got, prefix) {
-		t.Errorf("truncated breadcrumb should start with '… › ', got %q", got)
-	}
-}
-
 func TestBreadcrumbPath_CycleProtection(t *testing.T) {
 	b := domain.NewBoard("test")
-	b.Items["a"] = &domain.Item{ID: "a", Title: "A", ParentID: "b"}
-	b.Items["b"] = &domain.Item{ID: "b", Title: "B", ParentID: "a"}
-	// Should not infinite loop
+	b.Items["a"] = &domain.Item{ID: "a", DisplayNum: 10, Title: "A", ParentID: "b"}
+	b.Items["b"] = &domain.Item{ID: "b", DisplayNum: 20, Title: "B", ParentID: "a"}
 	got := breadcrumbPath(b, b.Items["a"], 100)
 	if got == "" {
 		t.Error("should produce some breadcrumb even with cycle")

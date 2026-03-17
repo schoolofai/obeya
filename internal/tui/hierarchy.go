@@ -1,22 +1,22 @@
 package tui
 
 import (
+	"fmt"
 	"sort"
 	"strings"
-	"unicode/utf8"
 
 	"github.com/niladribose/obeya/internal/domain"
 )
 
-// breadcrumbPath returns the ancestry path for an item.
-// Example: "Auth Rewrite › Session Mgmt"
-// Truncates from the left with "… › " prefix if the path exceeds maxWidth.
+// breadcrumbPath returns the ancestry path for an item using display numbers.
+// Example: "#1 › #4"
+// Compact and never needs truncation.
 func breadcrumbPath(board *domain.Board, item *domain.Item, maxWidth int) string {
 	if item.ParentID == "" {
 		return ""
 	}
 
-	var titles []string
+	var segments []string
 	visited := map[string]bool{item.ID: true}
 	cur := item
 	for cur.ParentID != "" {
@@ -28,34 +28,15 @@ func breadcrumbPath(board *domain.Board, item *domain.Item, maxWidth int) string
 		if !ok {
 			break
 		}
-		titles = append([]string{parent.Title}, titles...)
+		segments = append([]string{fmt.Sprintf("#%d", parent.DisplayNum)}, segments...)
 		cur = parent
 	}
 
-	if len(titles) == 0 {
+	if len(segments) == 0 {
 		return ""
 	}
 
-	path := strings.Join(titles, " › ")
-	if utf8.RuneCountInString(path) <= maxWidth {
-		return path
-	}
-
-	// Truncate from the left: remove leading segments until it fits
-	for len(titles) > 1 {
-		titles = titles[1:]
-		path = "… › " + strings.Join(titles, " › ")
-		if utf8.RuneCountInString(path) <= maxWidth {
-			return path
-		}
-	}
-	// Still too long: truncate the last remaining title
-	path = "… › " + titles[0]
-	runes := []rune(path)
-	if len(runes) > maxWidth {
-		return string(runes[:maxWidth-3]) + "..."
-	}
-	return path
+	return strings.Join(segments, " › ")
 }
 
 // childCount returns the total number of descendants of an item.

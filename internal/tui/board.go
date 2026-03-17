@@ -28,7 +28,11 @@ func (a App) renderBoard() string {
 		}
 		var cardViews []string
 		for _, item := range items {
-			cardViews = append(cardViews, a.renderCard(item, a.isItemAtCursor(item)))
+			card := a.renderCard(item, a.isItemAtCursor(item))
+			if a.isFirstLevelChild(item, colName) {
+				card = indentCard(card, 2)
+			}
+			cardViews = append(cardViews, card)
 		}
 		cardContent := ""
 		if len(cardViews) > 0 {
@@ -72,16 +76,8 @@ func (a App) visibleItemsInColumn(colIdx int) []*domain.Item {
 		}
 	}
 
-	// Filter out items hidden by collapsed ancestors
-	var visible []*domain.Item
-	for _, item := range colItems {
-		if !isHiddenByCollapse(a.board, item, a.collapsed) {
-			visible = append(visible, item)
-		}
-	}
-
 	// Order hierarchically: parents before children, depth-first by DisplayNum
-	return orderItemsHierarchically(a.board, visible)
+	return orderItemsHierarchically(a.board, colItems)
 }
 
 func (a App) renderBoardWithOverlay(overlay string) string {
@@ -147,6 +143,29 @@ func resolveUserName(board *domain.Board, userID string) string {
 		return u.Name
 	}
 	return userID
+}
+
+// isFirstLevelChild returns true if the item's direct parent is in the same column.
+// Only the first level of nesting gets indentation — deeper children use breadcrumbs.
+func (a App) isFirstLevelChild(item *domain.Item, colName string) bool {
+	if item.ParentID == "" {
+		return false
+	}
+	parent, ok := a.board.Items[item.ParentID]
+	if !ok {
+		return false
+	}
+	return parent.Status == colName
+}
+
+// indentCard prepends spaces to each line of a rendered card.
+func indentCard(card string, spaces int) string {
+	indent := strings.Repeat(" ", spaces)
+	lines := strings.Split(card, "\n")
+	for i, line := range lines {
+		lines[i] = indent + line
+	}
+	return strings.Join(lines, "\n")
 }
 
 // humanReviewItems returns items that need human review, sorted by confidence ascending.
