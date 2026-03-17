@@ -16,12 +16,20 @@ func (a App) renderCard(item *domain.Item, selected bool) string {
 
 func (a App) renderCardWithWidth(item *domain.Item, selected bool, w int) string {
 	barColor, hasBar := leftBarStyle(item.Type)
-	contentW := w - 4 // border(2) + padding(2)
+	// lipgloss Width sets the INNER content width (excludes border but includes padding)
+	// So innerW = w - 2 (border only), and lipgloss handles padding internally
+	innerW := w - 2
+	if innerW < 12 {
+		innerW = 12
+	}
+
+	// Content area = innerW - padding(2)
+	contentW := innerW - 2
 	if hasBar {
 		contentW -= 2 // account for "┃ " (bar + space)
 	}
-	if contentW < 10 {
-		contentW = 10
+	if contentW < 8 {
+		contentW = 8
 	}
 
 	lines := a.buildCardLines(item, selected, contentW)
@@ -32,12 +40,11 @@ func (a App) renderCardWithWidth(item *domain.Item, selected bool, w int) string
 
 	content := strings.Join(lines, "\n")
 
-	// Prepend left bar for epics/stories
 	if hasBar {
 		content = prependLeftBar(content, barColor)
 	}
 
-	return a.applyCardStyle(item, selected, content)
+	return a.applyCardStyleWithWidth(item, selected, content, innerW)
 }
 
 func (a App) buildCardLines(item *domain.Item, selected bool, contentW int) []string {
@@ -199,13 +206,22 @@ func (a App) appendReviewAccordion(lines []string, item *domain.Item, selected b
 }
 
 func (a App) applyCardStyle(item *domain.Item, selected bool, content string) string {
+	return a.applyCardStyleWithWidth(item, selected, content, 0)
+}
+
+func (a App) applyCardStyleWithWidth(item *domain.Item, selected bool, content string, innerW int) string {
+	var style lipgloss.Style
 	if selected {
-		return selectedCardStyle.Render(content)
+		style = selectedCardStyle
+	} else if item.HumanReview != nil && item.HumanReview.Status == "reviewed" {
+		style = reviewedCardStyle
+	} else {
+		style = cardStyle
 	}
-	if item.HumanReview != nil && item.HumanReview.Status == "reviewed" {
-		return reviewedCardStyle.Render(content)
+	if innerW > 0 {
+		style = style.Width(innerW)
 	}
-	return cardStyle.Render(content)
+	return style.Render(content)
 }
 
 func (a App) isItemAtCursor(item *domain.Item) bool {

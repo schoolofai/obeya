@@ -16,7 +16,7 @@
 ││ ┃    expired ┃│ │                │ ││    real-time ││ │                │ │                │ │                   │ 
 ││ ┃    session ┃│ │                │ ││    WebSocket ││ │                │ │                │ │                   │ 
 ││ ┃    s with  ┃│ │                │ ││    events    ││ │                │ │                │ │                   │ 
-││ ┃    automat ┃│ │                │ ││ task ●●●     ││ │                │ │                │ │                   │ 
+││ ┃    automat ││ │                │ ││ task ●●●     ││ │                │ │                │ │                   │ 
 ││ ┃    ic      ││ │                │ ││ @unassigned  ││ │                │ │                │ │                   │ 
 ││ ┃    retry   ││ │                │ │╰──────────────╯│ │                │ │                │ │                   │ 
 ││ ┃    logic   ││ │                │ │                │ │                │ │                │ │                   │ 
