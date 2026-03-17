@@ -11,7 +11,10 @@ import (
 )
 
 func (a App) renderCard(item *domain.Item, selected bool) string {
-	w := a.columnWidth()
+	return a.renderCardWithWidth(item, selected, a.columnWidth())
+}
+
+func (a App) renderCardWithWidth(item *domain.Item, selected bool, w int) string {
 	barColor, hasBar := leftBarStyle(item.Type)
 	contentW := w - 4 // border(2) + padding(2)
 	if hasBar {

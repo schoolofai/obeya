@@ -17,8 +17,9 @@ func isHumanReviewColumn(columns []string, colIdx int) bool {
 
 func (a App) renderBoard() string {
 	var cols []string
-	w := a.columnWidth()
+	widths := a.columnWidths()
 	for i, colName := range a.columns {
+		w := widths[i]
 		items := a.visibleItemsInColumn(i)
 		nativeCount := 0
 		for _, it := range items {
@@ -28,7 +29,7 @@ func (a App) renderBoard() string {
 		}
 		var cardViews []string
 		for _, item := range items {
-			card := a.renderCard(item, a.isItemAtCursor(item))
+			card := a.renderCardWithWidth(item, a.isItemAtCursor(item), w)
 			if a.isFirstLevelChild(item, colName) {
 				card = indentCard(card, 2)
 			}
@@ -86,20 +87,95 @@ func (a App) renderBoardWithOverlay(overlay string) string {
 	return board + "\n\n" + overlayRendered
 }
 
-// columnWidth returns the content width for each column.
+// columnWidth returns the content width for the current cursor column.
+// Delegates to columnWidthFor for per-column proportional sizing.
 func (a App) columnWidth() int {
-	if a.width == 0 || len(a.columns) == 0 {
-		return 22
-	}
+	return a.columnWidthFor(a.cursorCol)
+}
+
+// columnWidths computes per-column widths proportionally.
+// Empty columns shrink to a narrow strip; populated columns share the rest.
+func (a App) columnWidths() []int {
 	n := len(a.columns)
-	w := (a.width + 1 - 3*n) / n
-	if w < 18 {
-		return 18
+	if n == 0 || a.width == 0 {
+		widths := make([]int, n)
+		for i := range widths {
+			widths[i] = 22
+		}
+		return widths
 	}
-	if w > 28 {
-		return 28
+
+	const minEmpty = 8
+	const minFull = 16
+	const maxFull = 32
+	const overhead = 3 // border(2) + marginRight(1)
+
+	itemCounts := a.itemCountsPerColumn()
+	available := a.width + 1 - overhead*n
+
+	var emptyCount, popCount int
+	for _, c := range itemCounts {
+		if c == 0 {
+			emptyCount++
+		} else {
+			popCount++
+		}
 	}
-	return w
+
+	widths := make([]int, n)
+
+	if popCount == 0 {
+		each := available / n
+		for i := range widths {
+			widths[i] = each
+		}
+		return widths
+	}
+
+	emptyTotal := emptyCount * minEmpty
+	popAvail := available - emptyTotal
+	perPop := popAvail / popCount
+	if perPop < minFull {
+		perPop = minFull
+	}
+	if perPop > maxFull {
+		perPop = maxFull
+	}
+
+	for i, c := range itemCounts {
+		if c == 0 {
+			widths[i] = minEmpty
+		} else {
+			widths[i] = perPop
+		}
+	}
+	return widths
+}
+
+// columnWidthFor returns the content width for a specific column.
+func (a App) columnWidthFor(colIdx int) int {
+	widths := a.columnWidths()
+	if colIdx >= 0 && colIdx < len(widths) {
+		return widths[colIdx]
+	}
+	return 22
+}
+
+// itemCountsPerColumn returns the item count for each column.
+func (a App) itemCountsPerColumn() []int {
+	counts := make([]int, len(a.columns))
+	for i, colName := range a.columns {
+		if colName == humanReviewColName {
+			counts[i] = len(a.humanReviewItems())
+		} else if a.board != nil {
+			for _, item := range a.board.Items {
+				if item.Status == colName {
+					counts[i]++
+				}
+			}
+		}
+	}
+	return counts
 }
 
 func cyclePriority(current string) string {

@@ -70,10 +70,14 @@ func NewApp(eng *engine.Engine, boardPath string) App {
 }
 
 func (a *App) initColumnModels() {
-	w := a.columnWidth()
+	widths := a.columnWidths()
 	viewH := a.contentViewHeight()
 	a.colModels = make([]ColumnModel, len(a.columns))
 	for i, name := range a.columns {
+		w := 22
+		if i < len(widths) {
+			w = widths[i]
+		}
 		a.colModels[i] = NewColumnModel(name, w, viewH)
 	}
 	if a.cursorCol >= 0 && a.cursorCol < len(a.colModels) {
@@ -120,9 +124,13 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		a.width = msg.Width
 		a.height = msg.Height
-		w := a.columnWidth()
+		widths := a.columnWidths()
 		viewH := a.contentViewHeight()
 		for i := range a.colModels {
+			w := 22
+			if i < len(widths) {
+				w = widths[i]
+			}
 			a.colModels[i].SetSize(w, viewH)
 		}
 		if a.state == stateDAG {
