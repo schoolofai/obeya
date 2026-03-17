@@ -54,12 +54,15 @@ func (a App) renderBoard() string {
 		}
 	}
 	board := lipgloss.JoinHorizontal(lipgloss.Top, cols...)
+	// Clamp each board line to terminal width to prevent overflow
+	board = a.clampToTerminalWidth(board)
+
 	header := fmt.Sprintf("  Obeya Board: %s", a.board.Name)
 	help := helpStyle.Render(
-		"  h/l:columns  j/k:items  v:desc  V:review  m:move  a:assign  c:create  d:delete  " +
-			"p:priority  R:reviewed  x:hide  P:past-reviews  Enter:detail  G:dag  D:dash  q:quit",
+		"  hjkl:nav  v:desc  V:review  m:move  a:assign  c:create  d:del  p:pri  R:reviewed  x:hide  P:past  Enter:detail  G:dag  D:dash  q:quit",
 	)
-	return header + "\n" + board + "\n" + help
+	result := header + "\n" + board + "\n" + help
+	return a.clampToTerminalWidth(result)
 }
 
 func (a App) visibleItemsInColumn(colIdx int) []*domain.Item {
@@ -109,13 +112,15 @@ func (a App) columnWidths() []int {
 		return widths
 	}
 
-	const minEmpty = 8
+	const minEmpty = 6  // just enough for column header abbreviation
 	const minFull = 16
-	const maxFull = 32
-	const overhead = 3 // border(2) + marginRight(1)
+	// Each column: border(2) + content(w) + marginRight(1) = w + 3
+	// All columns including last get marginRight(1)
+	// Total: sum(w_i) + n*3 <= terminal_width
+	// => sum(w_i) <= terminal_width - 3*n
 
 	itemCounts := a.itemCountsPerColumn()
-	available := a.width + 1 - overhead*n
+	available := a.width - 3*n
 
 	var emptyCount, popCount int
 	for _, c := range itemCounts {
@@ -136,14 +141,12 @@ func (a App) columnWidths() []int {
 		return widths
 	}
 
+	// Give empty columns minimum, populated columns share the rest equally — no cap
 	emptyTotal := emptyCount * minEmpty
 	popAvail := available - emptyTotal
 	perPop := popAvail / popCount
 	if perPop < minFull {
 		perPop = minFull
-	}
-	if perPop > maxFull {
-		perPop = maxFull
 	}
 
 	for i, c := range itemCounts {
@@ -223,6 +226,28 @@ func resolveUserName(board *domain.Board, userID string) string {
 		return u.Name
 	}
 	return userID
+}
+
+// clampToTerminalWidth truncates each line to terminal width using lipgloss
+// for ANSI-aware and unicode-aware width measurement.
+func (a App) clampToTerminalWidth(content string) string {
+	if a.width <= 0 {
+		return content
+	}
+	maxW := a.width
+	lines := strings.Split(content, "\n")
+	for i, line := range lines {
+		for lipgloss.Width(lines[i]) > maxW {
+			// Remove one rune at a time from the end until it fits
+			runes := []rune(lines[i])
+			if len(runes) == 0 {
+				break
+			}
+			lines[i] = string(runes[:len(runes)-1])
+		}
+		_ = line
+	}
+	return strings.Join(lines, "\n")
 }
 
 // isFirstLevelChild returns true if the item's direct parent is in the same column.

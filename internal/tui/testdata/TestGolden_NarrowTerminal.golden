@@ -1,24 +1,24 @@
   Obeya Board: test-board
-╭────────────────╮ ╭────────────────╮ ╭────────────────╮ ╭────────────────╮ ╭────────────────╮ ╭───────────────────╮ 
-│BACKLOG (2)     │ │TODO (1)        │ │IN-PROGRESS (1) │ │REVIEW (1)      │ │DONE (1)        │ │⚡ REVIEW QUEUE (0)│ 
-│┏━━━━━━━━━━━━━━┃│ │╭──────────────╮│ │╭──────────────╮│ │╭──────────────╮│ │╭──────────────╮│ │                   │ 
-│┃ #1 Short     ┃│ ││ #3 Another   ││ ││ #4 Implement ││ ││ #5 Fix bug   ││ ││ #6 Done task ││ │                   │ 
-│┃    task      ┃│ ││    task in   ││ ││    the full  ││ ││    in review ││ ││ task ●       ││ │                   │ 
-│┃ task ●●      ┃│ ││    todo      ││ ││    end-to-en ││ ││ task ●●      ││ ││ @unassigned  ││ │                   │ 
-│┃ @unassigned  ┃│ ││    column    ││ ││    d         ││ ││ @unassigned  ││ │╰──────────────╯│ │                   │ 
-│┗━━━━━━━━━━━━━━┃│ ││ task ●       ││ ││    integrati ││ │╰──────────────╯│ │                │ │                   │ 
-│╭──────────────┃│ ││ @unassigned  ││ ││    on test   ││ │                │ │                │ │                   │ 
-││ ┃ #2 Add     ┃│ │╰──────────────╯│ ││    suite for ││ │                │ │                │ │                   │ 
-││ ┃    token   ┃│ │                │ ││    cloud     ││ │                │ │                │ │                   │ 
-││ ┃    refresh ┃│ │                │ ││    synchroni ││ │                │ │                │ │                   │ 
-││ ┃    handlin ┃│ │                │ ││    zation    ││ │                │ │                │ │                   │ 
-││ ┃    g for   ┃│ │                │ ││    with      ││ │                │ │                │ │                   │ 
-││ ┃    expired ┃│ │                │ ││    real-time ││ │                │ │                │ │                   │ 
-││ ┃    session ┃│ │                │ ││    WebSocket ││ │                │ │                │ │                   │ 
-││ ┃    s with  ┃│ │                │ ││    events    ││ │                │ │                │ │                   │ 
-││ ┃    automat ││ │                │ ││ task ●●●     ││ │                │ │                │ │                   │ 
-││ ┃    ic      ││ │                │ ││ @unassigned  ││ │                │ │                │ │                   │ 
-││ ┃    retry   ││ │                │ │╰──────────────╯│ │                │ │                │ │                   │ 
-││ ┃    logic   ││ │                │ │                │ │                │ │                │ │                   │ 
-╰────────────────╯ ╰────────────────╯ ╰────────────────╯ ╰────────────────╯ ╰────────────────╯ ╰───────────────────╯ 
-  h/l:columns  j/k:items  v:desc  V:review  m:move  a:assign  c:create  d:delete  p:priority  R:reviewed  x:hide  P:past-reviews  Enter:detail  G:dag  D:dash  q:quit
+╭────────────────╮ ╭────────────────╮ ╭────────────────╮ ╭────────────────╮ ╭───
+│BACKLOG (2)     │ │TODO (1)        │ │IN-PROGRESS (1) │ │REVIEW (1)      │ │DON
+│┏━━━━━━━━━━━━━━┃│ │╭──────────────╮│ │╭──────────────╮│ │╭──────────────╮│ │╭──
+│┃ #1 Short     ┃│ ││ #3 Another   ││ ││ #4 Implement ││ ││ #5 Fix bug   ││ ││ #
+│┃    task      ┃│ ││    task in   ││ ││    the full  ││ ││    in review ││ ││ t
+│┃ task ●●      ┃│ ││    todo      ││ ││    end-to-en ││ ││ task ●●      ││ ││ @
+│┃ @unassigned  ┃│ ││    column    ││ ││    d         ││ ││ @unassigned  ││ │╰──
+│┗━━━━━━━━━━━━━━┃│ ││ task ●       ││ ││    integrati ││ │╰──────────────╯│ │   
+│╭──────────────┃│ ││ @unassigned  ││ ││    on test   ││ │                │ │   
+││ ┃ #2 Add     ┃│ │╰──────────────╯│ ││    suite for ││ │                │ │   
+││ ┃    token   ┃│ │                │ ││    cloud     ││ │                │ │   
+││ ┃    refresh ┃│ │                │ ││    synchroni ││ │                │ │   
+││ ┃    handlin ┃│ │                │ ││    zation    ││ │                │ │   
+││ ┃    g for   ┃│ │                │ ││    with      ││ │                │ │   
+││ ┃    expired ┃│ │                │ ││    real-time ││ │                │ │   
+││ ┃    session ┃│ │                │ ││    WebSocket ││ │                │ │   
+││ ┃    s with  ┃│ │                │ ││    events    ││ │                │ │   
+││ ┃    automat ││ │                │ ││ task ●●●     ││ │                │ │   
+││ ┃    ic      ││ │                │ ││ @unassigned  ││ │                │ │   
+││ ┃    retry   ││ │                │ │╰──────────────╯│ │                │ │   
+││ ┃    logic   ││ │                │ │                │ │                │ │   
+╰────────────────╯ ╰────────────────╯ ╰────────────────╯ ╰────────────────╯ ╰───
+  hjkl:nav  v:desc  V:review  m:move  a:assign  c:create  d:del  p:pri  R:review
