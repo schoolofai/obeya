@@ -59,7 +59,7 @@ func (a App) renderBoard() string {
 
 	header := fmt.Sprintf("  Obeya Board: %s", a.board.Name)
 	help := helpStyle.Render(
-		"  hjkl:nav  v:desc  V:review  m:move  a:assign  c:create  d:del  p:pri  R:reviewed  x:hide  P:past  Enter:detail  G:dag  D:dash  q:quit",
+		"  hjkl:nav  v:desc  m:move  c:create  d:del  +/-:resize  G:dag  D:dash  P:past  R:reviewed  x:hide  V:review  q:quit",
 	)
 	result := header + "\n" + board + "\n" + help
 	return a.clampToTerminalWidth(result)
@@ -156,6 +156,35 @@ func (a App) columnWidths() []int {
 			widths[i] = perPop
 		}
 	}
+
+	// Apply custom width overrides from +/- resizing
+	if len(a.customWidths) > 0 {
+		customTotal := 0
+		customCount := 0
+		for idx, cw := range a.customWidths {
+			if idx >= 0 && idx < n {
+				widths[idx] = cw
+				customTotal += cw
+				customCount++
+			}
+		}
+		// Redistribute remaining space among non-custom columns
+		usedByCustom := customTotal
+		remainingCols := n - customCount
+		if remainingCols > 0 {
+			remaining := available - usedByCustom
+			each := remaining / remainingCols
+			if each < 6 {
+				each = 6
+			}
+			for i := range widths {
+				if _, isCustom := a.customWidths[i]; !isCustom {
+					widths[i] = each
+				}
+			}
+		}
+	}
+
 	return widths
 }
 

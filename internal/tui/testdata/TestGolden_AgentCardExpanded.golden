@@ -37,4 +37,4 @@
 │                            │ │        │ │               │ │          │ │                            │ │               
 │                            │ │        │ │               │ │          │ │                            │ │               
 ╰────────────────────────────╯ ╰────────╯ ╰───────────────╯ ╰──────────╯ ╰────────────────────────────╯ ╰───────────────
-  hjkl:nav  v:desc  V:review  m:move  a:assign  c:create  d:del  p:pri  R:reviewed  x:hide  P:past  Enter:detail  G:dag 
+  hjkl:nav  v:desc  m:move  c:create  d:del  +/-:resize  G:dag  D:dash  P:past  R:reviewed  x:hide  V:review  q:quit

@@ -21,4 +21,4 @@
 ││ ┃    retry   ││ │                │ │╰──────────────╯│ │                │ │   
 ││ ┃    logic   ││ │                │ │                │ │                │ │   
 ╰────────────────╯ ╰────────────────╯ ╰────────────────╯ ╰────────────────╯ ╰───
-  hjkl:nav  v:desc  V:review  m:move  a:assign  c:create  d:del  p:pri  R:review
+  hjkl:nav  v:desc  m:move  c:create  d:del  +/-:resize  G:dag  D:dash  P:past  

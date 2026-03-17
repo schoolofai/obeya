@@ -45,8 +45,9 @@ type App struct {
 	confirmMsg  string
 
 	// Dimensions
-	width  int
-	height int
+	width        int
+	height       int
+	customWidths map[int]int // per-column width overrides (colIdx → width), set by +/-
 
 	// Identity for review operations
 	userID    string
@@ -62,8 +63,9 @@ func NewApp(eng *engine.Engine, boardPath string) App {
 	return App{
 		engine:    eng,
 		boardPath: boardPath,
-		collapsed: make(map[string]bool),
-		state:     stateBoard,
+		collapsed:    make(map[string]bool),
+		customWidths: make(map[int]int),
+		state:        stateBoard,
 		userID:    uid,
 		sessionID: domain.GenerateID(),
 	}
@@ -82,6 +84,34 @@ func (a *App) initColumnModels() {
 	}
 	if a.cursorCol >= 0 && a.cursorCol < len(a.colModels) {
 		a.colModels[a.cursorCol].active = true
+	}
+}
+
+// resizeColumn adjusts the custom width of a column by delta chars.
+// Steals/gives space from adjacent non-active columns.
+func (a *App) resizeColumn(colIdx int, delta int) {
+	if colIdx < 0 || colIdx >= len(a.columns) {
+		return
+	}
+	widths := a.columnWidths()
+	current := widths[colIdx]
+	newW := current + delta
+	if newW < 6 {
+		newW = 6
+	}
+	a.customWidths[colIdx] = newW
+}
+
+// rebuildColumnModels recreates column models with current widths.
+func (a *App) rebuildColumnModels() {
+	widths := a.columnWidths()
+	viewH := a.contentViewHeight()
+	for i := range a.colModels {
+		w := 22
+		if i < len(widths) {
+			w = widths[i]
+		}
+		a.colModels[i].SetSize(w, viewH)
 	}
 }
 
@@ -564,6 +594,16 @@ func (a App) handleBoardKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	case " ":
 		// No-op: hierarchy shown via indentation, no collapse
+	case "+", "=":
+		a.resizeColumn(a.cursorCol, 4)
+		a.rebuildColumnModels()
+	case "-", "_":
+		a.resizeColumn(a.cursorCol, -4)
+		a.rebuildColumnModels()
+	case "0":
+		// Reset all custom widths
+		a.customWidths = make(map[int]int)
+		a.rebuildColumnModels()
 	case "/":
 		a.input = newInputModel("Search:")
 		a.state = stateInput
