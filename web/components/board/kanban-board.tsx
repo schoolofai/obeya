@@ -1,10 +1,14 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { DragDropContext, type DropResult } from "@hello-pangea/dnd";
 import { KanbanColumn } from "./kanban-column";
 import { ItemDetailPanel } from "./item-detail-panel";
 import { ReviewQueuePanel } from "./review-queue-panel";
+import {
+  isHiddenByCollapse,
+  orderItemsHierarchically,
+} from "@/lib/hierarchy";
 import type { BoardItem, BoardColumn, Board } from "@/lib/api-client";
 
 interface KanbanBoardProps {
@@ -15,13 +19,31 @@ interface KanbanBoardProps {
 export function KanbanBoard({ board, items: initialItems }: KanbanBoardProps) {
   const [items, setItems] = useState<BoardItem[]>(initialItems);
   const [selectedItem, setSelectedItem] = useState<BoardItem | null>(null);
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const columns: BoardColumn[] = JSON.parse(board.columns);
 
-  const itemsByColumn = useCallback(
-    (columnName: string) =>
-      items.filter((item) => item.status === columnName),
-    [items]
+  const allItemsMap = useMemo(() => {
+    const map: Record<string, BoardItem> = {};
+    for (const item of items) {
+      map[item.$id] = item;
+    }
+    return map;
+  }, [items]);
+
+  const visibleColumnItems = useCallback(
+    (columnName: string) => {
+      const colItems = items.filter((item) => item.status === columnName);
+      const visible = colItems.filter(
+        (item) => !isHiddenByCollapse(allItemsMap, item, collapsed)
+      );
+      return orderItemsHierarchically(allItemsMap, visible);
+    },
+    [items, allItemsMap, collapsed]
   );
+
+  const handleToggleCollapse = useCallback((itemId: string) => {
+    setCollapsed((prev) => ({ ...prev, [itemId]: !prev[itemId] }));
+  }, []);
 
   const revertMove = useCallback(
     (draggableId: string, originalStatus: string) => {
@@ -133,7 +155,10 @@ export function KanbanBoard({ board, items: initialItems }: KanbanBoardProps) {
               <KanbanColumn
                 key={column.name}
                 column={column}
-                items={itemsByColumn(column.name)}
+                items={visibleColumnItems(column.name)}
+                allItems={allItemsMap}
+                collapsed={collapsed}
+                onToggleCollapse={handleToggleCollapse}
                 onCardClick={handleCardClick}
               />
             ))}

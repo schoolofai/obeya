@@ -7,10 +7,20 @@ import type { BoardItem, BoardColumn } from "@/lib/api-client";
 interface KanbanColumnProps {
   column: BoardColumn;
   items: BoardItem[];
+  allItems: Record<string, BoardItem>;
+  collapsed: Record<string, boolean>;
+  onToggleCollapse: (itemId: string) => void;
   onCardClick: (item: BoardItem) => void;
 }
 
-export function KanbanColumn({ column, items, onCardClick }: KanbanColumnProps) {
+export function KanbanColumn({
+  column,
+  items,
+  allItems,
+  collapsed,
+  onToggleCollapse,
+  onCardClick,
+}: KanbanColumnProps) {
   const isOverLimit = column.limit > 0 && items.length > column.limit;
   const isAtLimit = column.limit > 0 && items.length === column.limit;
 
@@ -54,7 +64,13 @@ export function KanbanColumn({ column, items, onCardClick }: KanbanColumnProps) 
                     {...dragProvided.draggableProps}
                     {...dragProvided.dragHandleProps}
                   >
-                    <KanbanCard item={item} onClick={() => onCardClick(item)} />
+                    <KanbanCard
+                      item={item}
+                      allItems={allItems}
+                      collapsed={collapsed}
+                      onToggleCollapse={onToggleCollapse}
+                      onClick={() => onCardClick(item)}
+                    />
                   </div>
                 )}
               </Draggable>
