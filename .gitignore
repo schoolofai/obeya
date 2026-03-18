@@ -9,3 +9,4 @@ obeya-plugin/skills-workspace/
 web/node_modules/
 web/.next/
 web/.env.local
+node_modules/
